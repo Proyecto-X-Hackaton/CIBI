@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>01 Chat-captura — mockup</title>
+<style>
+:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E;--blue:#3B82F6;--amber:#F59E0B}
+*{box-sizing:border-box}
+body{background:#0A0A0E;display:flex;justify-content:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px;color:var(--text)}
+.phone{width:390px;height:844px;background:var(--bg);border:1px solid #33333F;border-radius:44px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.6);flex-shrink:0}
+.screen{background:var(--bg);border-radius:34px;height:100%;display:flex;flex-direction:column;overflow:hidden}
+.statusbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px 2px;font-size:13px;font-weight:600}
+.appbar{padding:8px 16px 0}.brandrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.brand{font-weight:800;font-size:15px;letter-spacing:.3px}
+.pill{font-size:11px;font-weight:700;background:rgba(34,197,94,.14);color:var(--green);border:1px solid rgba(34,197,94,.45);border-radius:20px;padding:5px 10px;white-space:nowrap}
+.wizbar{display:flex;align-items:center;gap:10px;padding:10px 16px 0}
+.back{font-size:13px;color:var(--muted);text-decoration:none}
+.steps{padding:10px 16px 0;flex:1}.steplabel{font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between}
+.track{height:6px;background:#22222C;border-radius:4px;overflow:hidden}.fill{height:100%;background:var(--green);border-radius:4px;width:50%}
+.chat{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.bubble{max-width:88%;border-radius:16px;padding:12px 14px;font-size:13.5px;line-height:1.55}
+.ai{background:var(--surface);border:1px solid var(--border);align-self:flex-start;border-top-left-radius:6px}
+.user{background:rgba(59,130,246,.18);border:1px solid rgba(59,130,246,.5);align-self:flex-end;border-top-right-radius:6px}
+.meta{font-size:11px;color:var(--muted);margin-top:6px}
+.chip{font-size:11px;background:#23232D;border:1px solid #34343F;border-radius:12px;padding:3px 9px;color:#D6D6DE;display:inline-block;margin:2px 2px 0 0}
+.chip.green{background:rgba(34,197,94,.14);color:var(--green);border-color:rgba(34,197,94,.45)}
+.chip.amber{background:rgba(245,158,11,.12);color:var(--amber);border-color:rgba(245,158,11,.45)}
+.guide{background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.4);border-radius:12px;padding:10px;margin-top:8px;font-size:12.5px}
+.guide b{color:var(--green)}
+.qbtns{display:flex;gap:8px;margin-top:8px}
+.qbtn{flex:1;background:#0B0B0F;border:1px solid #3A3A45;color:#fff;border-radius:10px;padding:9px;font-size:12.5px}
+.composer{border-top:1px solid var(--border);background:#101016;padding:10px 12px 6px}
+.crow{display:flex;gap:8px}
+.mic{flex:1;background:var(--blue);border:0;color:#fff;border-radius:12px;min-height:50px;font-weight:700;font-size:14px}
+.iconbtn{width:50px;min-height:50px;background:#23232D;border:1px solid #34343F;color:#fff;border-radius:12px;font-size:19px}
+.cta{background:var(--green);color:#04120A;border:0;border-radius:14px;min-height:52px;font-weight:800;font-size:15px;width:100%;margin:8px 0 4px}
+.fine{font-size:11px;color:#8A8A95;line-height:1.5;text-align:center;padding:0 12px 14px;background:#101016}
+.models{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:0 12px 8px;background:#101016}
+</style></head>
+<body><div class="phone"><div class="screen">
+<div class="statusbar"><span>9:41</span><span>📶 📡 🔋</span></div>
+<div class="appbar"><div class="brandrow"><span class="brand">CIBI · Visita</span><span class="pill">● SIN CONEXIÓN</span></div></div>
+<div class="wizbar"><a class="back">✕ Salir</a><div class="steps" style="padding:0"><div class="steplabel"><span>Paso 1 de 2 — Chat experto</span><span>Borrador ●</span></div><div class="track"><div class="fill"></div></div></div></div>
+<div class="chat">
+<div class="bubble ai">👋 Soy tu asistente de inventario. Háblame en ES/PT y te guío: qué mirar, qué foto tomar, a quién preguntar.<br><span class="meta">MedPsy-1.7B-Q4 · TranslatePsy-EuroNano · Parakeet-TDT</span></div>
+<div class="bubble user">Visité Hospital Alpha hoy. Tienen tres MR, dos CT y cuatro ultrasonidos. Dos MR tienen 8–10 años.<div class="meta">ES detectado → EN guardado · 🔊 leer</div></div>
+<div class="bubble ai">Anoté <b>3 MR / 2 CT / 4 US</b>. <span class="chip">Reported</span> <span class="chip amber">CT sin fabricante: Unknown</span><br><br>🤖 Lo más valioso: <b>¿fabricante de los CT?</b>
+<div class="guide"><b>📖 Guía catálogo CT · Familia X v2026-09-09</b><br>• Placa: lateral inferior del gantry<br>• 📷 Prioridad: 1) macro de placa 2) foto amplia para conteo<br>• 🙋 Preguntar: ¿año de instalación?</div>
+<div class="meta">Fuente: catálogo local, no inventado · VisionPsy-Flash-Q8 listo</div>
+<div class="qbtns"><button class="qbtn">📷 Añadir 1 foto (autorizada)</button><button class="qbtn">Saltar</button></div></div>
+<div class="bubble user">📷 Placa MR-2 <span class="chip green">OCR 0.91 MAGNETOM</span><div class="meta">VisionPsy: modalidad MR ✓ · foto autorizada ☑</div></div>
+<div class="bubble ai">✓ MR confirmado por foto+OCR. <span class="chip green">Reported → Confirmed</span> en MR-2. Me falta edad de CT. ¿La preguntas o la saltamos?</div>
+</div>
+<div class="composer"><div class="crow"><button class="mic">🎙️ Mantén para hablar</button><button class="iconbtn">⌨️</button><button class="iconbtn">📷</button></div>
+<button class="cta">Pasar a revisar →</button></div>
+<div class="models"><span class="chip">MedPsy-1.7B-Q4</span><span class="chip">VisionPsy-Flash-Q8</span><span class="chip">TranslatePsy</span></div>
+<div class="fine">Extracción de inventario de equipamiento.<br>No es diagnóstico clínico.</div>
+</div></div></body></html>

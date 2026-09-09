@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>02 Revisión — mockup</title>
+<style>
+:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E}
+*{box-sizing:border-box}
+body{background:#0A0A0E;display:flex;justify-content:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px;color:var(--text)}
+.phone{width:390px;height:844px;background:var(--bg);border:1px solid #33333F;border-radius:44px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.6);flex-shrink:0}
+.screen{background:var(--bg);border-radius:34px;height:100%;display:flex;flex-direction:column;overflow:hidden}
+.statusbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px 2px;font-size:13px;font-weight:600}
+.appbar{padding:8px 16px 0}.brandrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.brand{font-weight:800;font-size:15px;letter-spacing:.3px}
+.pill{font-size:11px;font-weight:700;background:rgba(34,197,94,.14);color:var(--green);border:1px solid rgba(34,197,94,.45);border-radius:20px;padding:5px 10px;white-space:nowrap}
+.wizbar{display:flex;align-items:center;gap:10px;padding:10px 16px 0}
+.back{font-size:13px;color:var(--muted);text-decoration:none}
+.steps{padding:10px 16px 0;flex:1}.steplabel{font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between}
+.track{height:6px;background:#22222C;border-radius:4px;overflow:hidden}.fill{height:100%;background:var(--green);border-radius:4px;width:100%}
+.scroll{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:22px;margin:0}.sub{font-size:13px;color:var(--muted);margin:4px 0 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
+.card h3{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:0 0 12px}
+table{width:100%;font-size:13px;border-collapse:collapse}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
+td,th{border-bottom:1px solid var(--border);padding:10px 4px;text-align:left;vertical-align:middle}
+tr:last-child td{border-bottom:0}
+.conf{font-size:11px;font-weight:700;border-radius:10px;padding:3px 9px;white-space:nowrap;color:#fff}
+.rep{background:#6D28D9}.est{background:#B45309}.unk{background:#52525B}.con{background:#15803D}
+.small{font-size:12px;color:var(--muted);line-height:1.5}
+.warn{background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.5);border-radius:14px;padding:14px;font-size:13px;line-height:1.55}
+.warn b{color:#FBBF24}.warn .actions{margin-top:8px;display:flex;gap:14px}.warn a{color:#FBBF24}
+.q{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.45);border-radius:14px;padding:14px;font-size:13px;line-height:1.55}
+.q .rowbtns{display:flex;gap:8px;margin-top:12px}
+.answer{flex:1;background:#0B0B0F;color:#fff;border:1px solid #3A3A45;border-radius:10px;padding:10px;font-size:13px}
+.skip{background:transparent;border:1px solid #3A3A45;color:var(--muted);border-radius:10px;padding:10px 14px;font-size:13px}
+.cta{background:var(--green);color:#04120A;border:0;border-radius:14px;min-height:54px;font-weight:800;font-size:15px;width:100%}
+.ghost{background:transparent;border:1px solid #3A3A45;color:#fff;border-radius:14px;min-height:48px;font-size:14px;width:100%}
+.chip{font-size:11px;background:#23232D;border:1px solid #34343F;border-radius:12px;padding:4px 10px;color:#D6D6DE}
+.fine{font-size:11px;color:#8A8A95;line-height:1.5;text-align:center}
+</style></head>
+<body><div class="phone"><div class="screen">
+<div class="statusbar"><span>9:41</span><span>📶 📡 🔋</span></div>
+<div class="appbar"><div class="brandrow"><span class="brand">CIBI · Visita</span><span class="pill">● SIN CONEXIÓN</span></div></div>
+<div class="wizbar"><a class="back">‹ Volver al chat</a><div class="steps" style="padding:0"><div class="steplabel"><span>Paso 2 de 2 — Revisar y validar</span><span>Borrador ●</span></div><div class="track"><div class="fill"></div></div></div></div>
+<div class="scroll">
+<div><h1>Revisar extracción</h1><p class="sub">MedPsy-1.7B-Q4 · TTFT 0.9s · 11.4 t/s · del chat ↓</p></div>
+<div class="card"><h3>Equipos detectados (del chat)</h3><table>
+<tr><th>Equipo</th><th>Cant.</th><th>Edad</th><th>Conf.</th></tr>
+<tr><td><b>MR</b></td><td>3</td><td>8–10 a (2 uds)</td><td><span class="conf rep">Reported</span></td></tr>
+<tr><td><b>MR-2</b></td><td>1</td><td>placa OCR 0.91</td><td><span class="conf con">Confirmed</span></td></tr>
+<tr><td><b>CT</b></td><td>2</td><td>—</td><td><span class="conf unk">Unknown</span></td></tr>
+<tr><td><b>US</b></td><td>4</td><td>mixta</td><td><span class="conf est">Estimated</span></td></tr></table>
+<p class="small" style="margin:12px 0 0">Origen: chat ES→EN + OCR “…MAGNETOM…” (0.91) · Visión: modalidad MR ✓ <span class="chip">MedPsy-1.7B</span> <span class="chip">VisionPsy-Flash-Q8</span></p></div>
+<div class="warn"><b>⚠️ Posible duplicado</b><br>Este MR coincide 0.88 con “MR-2 reportado en junio”.<div class="actions"><a>Ver</a><a>Fusionar</a><a>Mantener ambos</a></div></div>
+<div class="q">🤖 Falta lo más valioso (1/2): <b>¿Fabricante de los CT?</b><br><span class="small">Responder mejora Unknown → Reported. O vuelve al chat para preguntarle al experto.</span>
+<div class="rowbtns"><input class="answer" placeholder="Ej. Fabricante X…"><button class="skip">Saltar</button></div></div>
+<button class="cta">Confirmar y guardar → ver ficha</button>
+<button class="ghost">Guardar borrador y salir a Inicio</button>
+<p class="fine">Extracción de inventario de equipamiento.<br>No es diagnóstico clínico.</p>
+</div>
+</div></div></body></html>

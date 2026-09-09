@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>00 Inicio / Visitas — mockup</title>
+<style>
+:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E;--blue:#3B82F6;--amber:#F59E0B}
+*{box-sizing:border-box}
+body{background:#0A0A0E;display:flex;justify-content:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px;color:var(--text)}
+.phone{width:390px;height:844px;background:var(--bg);border:1px solid #33333F;border-radius:44px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.6);flex-shrink:0}
+.screen{background:var(--bg);border-radius:34px;height:100%;display:flex;flex-direction:column;overflow:hidden}
+.statusbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px 2px;font-size:13px;font-weight:600}
+.appbar{padding:8px 16px 0}.brandrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.brand{font-weight:800;font-size:15px;letter-spacing:.3px}
+.pill{font-size:11px;font-weight:700;background:rgba(34,197,94,.14);color:var(--green);border:1px solid rgba(34,197,94,.45);border-radius:20px;padding:5px 10px;white-space:nowrap}
+.scroll{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+h1{font-size:22px;margin:0}.sub{font-size:13px;color:var(--muted);margin:4px 0 0}
+.search{width:100%;background:#0B0B0F;color:#fff;border:1px solid #3A3A45;border-radius:12px;padding:12px;font-size:14px}
+.filters{display:flex;gap:8px;flex-wrap:wrap}
+.fchip{font-size:12px;font-weight:600;background:#23232D;border:1px solid #34343F;border-radius:16px;padding:6px 12px;color:#D6D6DE}
+.fchip.on{background:rgba(34,197,94,.15);border-color:var(--green);color:var(--green)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px}
+.card.draft{border-color:var(--blue)}
+.row1{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.fac{font-weight:800;font-size:15px}.city{font-size:12px;color:var(--muted);margin-top:2px}
+.badges{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.chip{font-size:11px;background:#23232D;border:1px solid #34343F;border-radius:12px;padding:4px 10px;color:#D6D6DE}
+.chip.green{background:rgba(34,197,94,.14);color:var(--green);border-color:rgba(34,197,94,.45)}
+.chip.amber{background:rgba(245,158,11,.12);color:var(--amber);border-color:rgba(245,158,11,.45)}
+.chip.blue{background:rgba(59,130,246,.14);color:#93BBFD;border-color:rgba(59,130,246,.5)}
+.equip{font-size:13px;margin-top:8px;color:#D6D6DE}
+.actions{display:flex;gap:14px;margin-top:10px;font-size:13px}
+.actions a{color:var(--green);text-decoration:none;font-weight:600}
+.actions a.sec{color:#93BBFD}
+.newbtn{background:var(--green);color:#04120A;border:0;border-radius:14px;min-height:54px;font-weight:800;font-size:15px;width:100%}
+.fine{font-size:11px;color:#8A8A95;line-height:1.5;text-align:center}
+.tabbar{display:flex;border-top:1px solid var(--border);background:#101016;padding:10px 4px 20px}
+.tab{flex:1;text-align:center;font-size:10px;color:#6E6E78}.tab span{display:block;font-size:19px;margin-bottom:2px}
+.tab.active{color:var(--green);font-weight:700}
+.tab.fab{color:#04120A}.tab.fab b{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-top:-22px;background:var(--green);border-radius:22px;font-size:24px;color:#04120A}
+</style></head>
+<body><div class="phone"><div class="screen">
+<div class="statusbar"><span>9:41</span><span>📶 📡 🔋</span></div>
+<div class="appbar"><div class="brandrow"><span class="brand">CIBI</span><span class="pill">● SIN CONEXIÓN · 2 pendientes</span></div></div>
+<div class="scroll">
+<div><h1>Visitas</h1><p class="sub">Historial local · toca una sede para ver su ficha</p></div>
+<input class="search" placeholder="Buscar hospital, ciudad…  ej. Alpha">
+<div class="filters"><span class="fchip on">Todas</span><span class="fchip">Borrador</span><span class="fchip">Pendiente sync</span><span class="fchip">Re-verificar</span></div>
+<div class="card draft"><div class="row1"><div><div class="fac">Hospital Alpha</div><div class="city">São Paulo, Brasil · hoy 09:12 · A. Ruiz</div></div><span class="chip blue">Borrador</span></div>
+<div class="equip">3 MR / 2 CT / 4 US · <span class="chip">Reported</span></div>
+<div class="actions"><a>▶ Continuar chat</a><a class="sec">Descartar</a></div></div>
+<div class="card"><div class="row1"><div><div class="fac">Hospital Alpha</div><div class="city">São Paulo · 07-sep · verificado</div></div><span class="chip green">SYNCED</span></div>
+<div class="equip">3 MR / 2 CT / 5 US · confianza Media</div>
+<div class="badges"><span class="chip amber">⚠ MR-2 &gt;180d → re-verificar</span></div>
+<div class="actions"><a>Abrir ficha →</a><a class="sec">+ Nueva observación</a><a class="sec">⟳ Re-generar</a></div></div>
+<div class="card"><div class="row1"><div><div class="fac">Hospital Beta</div><div class="city">Campinas · 05-sep · pendiente</div></div><span class="chip amber">PENDING</span></div>
+<div class="equip">1 MR 9 años / 2 US · <span class="chip">Estimated</span></div>
+<div class="actions"><a>Abrir ficha →</a><a class="sec">Editar</a><a class="sec">⟳ Re-generar</a></div></div>
+<div class="card"><div class="row1"><div><div class="fac">Clínica Norte</div><div class="city">Bogotá, Colombia · 02-sep</div></div><span class="chip green">SYNCED</span></div>
+<div class="equip">2 CT / 3 US · confianza Alta</div>
+<div class="actions"><a>Abrir ficha →</a><a class="sec">Historial</a></div></div>
+<button class="newbtn">+ Nueva visita con IA</button>
+<p class="fine">Extracción de inventario de equipamiento.<br>No es diagnóstico clínico.</p>
+</div>
+<div class="tabbar"><div class="tab active"><span>🏠</span>Inicio</div><div class="tab fab"><b>+</b>Nueva</div><div class="tab"><span>🗺️</span>Red</div><div class="tab"><span>⚙️</span>Ajustes</div></div>
+</div></div></body></html>

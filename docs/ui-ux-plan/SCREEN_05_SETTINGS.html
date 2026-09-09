@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>05 Ajustes + Equipo local — mockup</title>
+<style>
+:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E;--blue:#3B82F6;--amber:#F59E0B}
+*{box-sizing:border-box}
+body{background:#0A0A0E;display:flex;justify-content:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px;color:var(--text)}
+.phone{width:390px;height:844px;background:var(--bg);border:1px solid #33333F;border-radius:44px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.6);flex-shrink:0}
+.screen{background:var(--bg);border-radius:34px;height:100%;display:flex;flex-direction:column;overflow:hidden}
+.statusbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px 2px;font-size:13px;font-weight:600}
+.appbar{padding:8px 16px 0}.brandrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.brand{font-weight:800;font-size:15px;letter-spacing:.3px}
+.pill{font-size:11px;font-weight:700;background:rgba(34,197,94,.14);color:var(--green);border:1px solid rgba(34,197,94,.45);border-radius:20px;padding:5px 10px;white-space:nowrap}
+.scroll{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:22px;margin:0}.sub{font-size:13px;color:var(--muted);margin:4px 0 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
+.card h3{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:0 0 12px}
+.small{font-size:12px;color:var(--muted);line-height:1.55}
+.mode{display:flex;flex-direction:column;gap:8px}
+.mopt{background:#0B0B0F;border:1px solid #34343F;border-radius:12px;padding:12px;font-size:13px;line-height:1.5}
+.mopt.on{border-color:var(--green);background:rgba(34,197,94,.08)}
+.mopt b{display:block}
+.peer{background:#0B0B0F;border:1px solid #34343F;border-radius:12px;padding:12px;font-size:13px;line-height:1.6}
+.peer.ok{border-color:var(--green)}
+.chip{font-size:11px;background:#23232D;border:1px solid #34343F;border-radius:12px;padding:4px 10px;color:#D6D6DE}
+.chip.green{background:rgba(34,197,94,.14);color:var(--green);border-color:rgba(34,197,94,.45)}
+.btn{background:var(--blue);border:0;color:#fff;border-radius:12px;min-height:48px;font-weight:700;font-size:14px;width:100%}
+.btn.ghost{background:#23232D;border:1px solid #34343F}
+.row{display:flex;gap:8px}.row .btn{flex:1}
+input.txt{width:100%;background:#0B0B0F;color:#fff;border:1px solid #3A3A45;border-radius:12px;padding:12px;font-size:14px}
+.warn{background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.45);border-radius:12px;padding:12px;font-size:12px;line-height:1.55}
+.fine{font-size:11px;color:#8A8A95;line-height:1.5;text-align:center}
+.tabbar{display:flex;border-top:1px solid var(--border);background:#101016;padding:10px 4px 20px}
+.tab{flex:1;text-align:center;font-size:10px;color:#6E6E78}.tab span{display:block;font-size:19px;margin-bottom:2px}
+.tab.active{color:var(--green);font-weight:700}
+.tab.fab b{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-top:-22px;background:var(--green);border-radius:22px;font-size:24px;color:#04120A}
+</style></head>
+<body><div class="phone"><div class="screen">
+<div class="statusbar"><span>9:41</span><span>📶 📡 🔋</span></div>
+<div class="appbar"><div class="brandrow"><span class="brand">CIBI · Ajustes</span><span class="pill">● SIN CONEXIÓN</span></div></div>
+<div class="scroll">
+<div><h1>Equipo local (peer)</h1><p class="sub">Mejora opcional con modelo grande en LAN · nunca obligatorio</p></div>
+<div class="card"><h3>Modo de inferencia</h3><div class="mode">
+<div class="mopt on"><b>📴 Solo teléfono (actual)</b><span class="small">Todo en @qvac/sdk. Recomendado en sótano.</span></div>
+<div class="mopt"><b>✨ Auto-mejorar si hay peer</b><span class="small">Guarda resultado local primero, luego pide 2ª pasada.</span></div>
+<div class="mopt"><b>❓ Preguntar siempre</b><span class="small">Muestra diff Teléfono vs Equipo local.</span></div>
+</div></div>
+<div class="card"><h3>Peers QVAC en LAN</h3>
+<div class="peer ok">🖥️ <b>WS-Ingenieria-01</b> · 192.168.1.42:8765<br><span class="small">MedPsy-4B-Q4 · ctx 32k · 18ms · <span class="chip green">verificado</span></span></div>
+<div style="height:8px"></div>
+<div class="peer">🖥️ <b>WS-Radiologia</b> · 192.168.1.50:8765<br><span class="small">Qwen-exacto por pinnear · sin probar</span></div>
+<div style="height:12px"></div>
+<div class="row"><button class="btn">Escanear LAN</button><button class="btn ghost">Probar</button></div>
+<div style="height:8px"></div>
+<input class="txt" placeholder="Añadir manual  ej. 192.168.1.42:8765">
+<p class="small" style="margin:8px 0 0">Peer = proceso QVAC aparte, NO el backend Django. Django solo guarda JSON (cero inferencia).</p>
+</div>
+<div class="card"><h3>Privacidad del peer</h3>
+<p class="small" style="margin:0">Por defecto solo van texto EN + OCR + candidato + IDs de catálogo. Foto/audio se quedan en el teléfono salvo permiso explícito.</p>
+<label class="small" style="display:flex;gap:8px;margin-top:10px"><input type="checkbox"> Permitir enviar 1 foto al peer de confianza</label>
+<label class="small" style="display:flex;gap:8px;margin-top:8px"><input type="checkbox"> Permitir audio</label>
+</div>
+<div class="warn">⟳ <b>Re-generar</b> una visita nunca borra el resultado del teléfono. Ves diff y eliges. Ambos quedan en <span class="chip">provenance {offline|peer}</span> + PERF_LOG.</div>
+<p class="fine">Extracción de inventario de equipamiento.<br>No es diagnóstico clínico.</p>
+</div>
+<div class="tabbar"><div class="tab"><span>🏠</span>Inicio</div><div class="tab fab"><b>+</b>Nueva</div><div class="tab"><span>🗺️</span>Red</div><div class="tab active"><span>⚙️</span>Ajustes</div></div>
+</div></div></body></html>
