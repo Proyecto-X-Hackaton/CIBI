@@ -41,7 +41,7 @@ PHONE (Expo + @qvac/sdk)          OPTIONAL PEER (workstation)       DRF SERVER
 - Django receives already-structured JSON and provenance; it never receives a prompt to infer, loads a model, or selects a model.
 
 ## 3. QVAC runtime facts baked into the design (from docs)
-- **Physical device only** (`expo run:ios/android --device`); emulators fail on llamacpp. Declare ONE primary device (e.g. Galaxy S25 Ultra / iPhone 15) + quantizations in F09.
+- **Physical device only — primary target: Android** (`expo run:android --device`); emulators fail on llamacpp. Declare ONE exact device model (e.g. Galaxy S25 Ultra SM-S938B, iOS deferred) + quantizations in F09.
 - `app.json` plugins: `expo-build-properties` (Android `minSdkVersion: 29`) + `@qvac/sdk/expo-plugin`; `npx expo prebuild` required.
 - `qvac.config.json` enables **only needed plugins** (`llamacpp-completion`, `nmt`, `whisper/parakeet`, `onnx-ocr`, `embeddings`) to keep the bundle lean.
 - Model lifecycle is always `loadModel → infer → unloadModel`, **one model resident at a time** (RAM < 4GB kills parallel loads). Every inference screen shows load/TTFT/throughput into the perf log.

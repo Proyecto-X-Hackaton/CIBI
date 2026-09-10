@@ -22,7 +22,7 @@ Why it fuses without feeling forced: Track 1's brief *already asks* for conversa
 ## 2. What "done" means (MVP slice — ruthless)
 
 ### P0 — must demo live on a physical phone, offline, in Spanish (48h)
-- [ ] F01 multilingual capture: ES/PT voice (Parakeet/Whisper) + text → TranslatePsy → EN normalized + original kept
+- [ ] F01 multilingual capture: typed ES/PT → TranslatePsy → EN normalized + original kept (P0); voice (Parakeet/Whisper) is stretch, typed fallback carries the demo
 - [ ] F02 photo capture: 1 photo → VisionPsy-Nano-Flash description + OCR blocks
 - [ ] F03 structuring: MedPsy → JSON `{customer, city, country, items[{modality, manufacturer, model, qty, age_text, age_years}]}`, per-field confidence
 - [ ] F04 validation: local catalog match + machine-specific photo priorities/staff questions + 1–2 follow-ups for the top missing field + duplicate warning (embedding similarity) + confidence chips

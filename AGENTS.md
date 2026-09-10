@@ -6,6 +6,8 @@
 
 Offline-first mobile app for hospital field visits: **one visit → trusted installed-base intelligence, entirely on-device.**
 
+> Peer note (P1, non-judged): the phone baseline above is the judged flow and works fully offline. Optionally the app may request a second pass from a reachable local QVAC instance (workstation peer, `@qvac/sdk`, never cloud/Django) running larger models for better quality — always opt-in, versioned (v+1, never silent replace), with local fallback. Video demos 🟢 offline; peer is enhancement only.
+
 Happy path (the only story the ≤5min Spanish video tells):
 1. Engineer speaks/types in ES/PT → **TranslatePsy** normalizes to EN (original kept).
 2. Snaps 1 permitted photo → **VisionPsy-Nano-460M-Flash** (modality) + **ONNX OCR** (label text).
@@ -38,7 +40,7 @@ SQLite outbox ──HTTP JSON──────────▶  NEVER calls any 
 
 ## 3. QVAC runtime facts (do not rediscover)
 
-- **Physical device only** (`expo run:ios/android --device`) — llamacpp fails on emulators. Declare ONE primary device.
+- **Physical device only — primary target: Android** (`expo run:android --device`, dev build via prebuild, not Expo Go) — llamacpp fails on emulators. Test device: physical Android 13, 12GB RAM (exact `Build.MODEL` recorded in `PERF_LOG.jsonl` at smoke test); iOS deferred.
 - `app.json` plugins: `expo-build-properties` (Android `minSdkVersion: 29`) + `@qvac/sdk/expo-plugin`; then `npx expo prebuild`.
 - `qvac.config.json` enables only needed plugins (llamacpp-completion, nmt, whisper/parakeet, onnx-ocr, embeddings).
 - Lifecycle is always `loadModel → infer → unloadModel`, **one model resident at a time**; log every span (load_ms, TTFT, tokens in/out, throughput).
@@ -62,12 +64,14 @@ SQLite outbox ──HTTP JSON──────────▶  NEVER calls any 
 - Folders `kebab-case` (`docs/features`, `docs/ui-ux-plan`). Files `SCREAMING_SNAKE_CASE.md`.
 - Feature docs (F01–F09) must each cover: **frontend alone / backend alone / both together / QVAC calls / schema / acceptance criteria**. Don't merge or rename them without asking.
 - UI previews: plain `.html` mockups + `.md` mermaid flows in `docs/ui-ux-plan` first; hallway-test HTML on a phone browser before coding screens.
-- Key docs: `docs/PROJECT_SCOPE.md` (P0/P1/out-of-scope) · `docs/TECH_STACK_AND_ARCHITECTURE.md` (API contract, entities) · `docs/COMPLIANCE_AND_RISK_REGISTER.md` (matrix + self-scores) · `docs/FORTY_EIGHT_HOUR_PLAN.md` (D1 phone → D2 trust/design → D3 video).
+- Key docs: `docs/PROJECT_SCOPE.md` (P0/P1/out-of-scope) · `docs/TECH_STACK_AND_ARCHITECTURE.md` (API contract, entities) · `docs/COMPLIANCE_AND_RISK_REGISTER.md` (matrix + self-scores). (`docs/FORTY_EIGHT_HOUR_PLAN.md` was dropped — do not reference it; D1 phone → D2 trust/design → D3 video lives in PROJECT_SCOPE §4 + COMPLIANCE §2.)
+- Delivery artifacts (`LICENSE`, `PERF_LOG.jsonl`, video link, full README, `seed_synthetic.py`) are tracked in the compliance checklist above but intentionally deferred until coding/delivery — README stays minimal for now, do not block planning on it.
 - Spanish UI strings (video language). Confidence chips + offline badge + model cards on every AI screen.
 
 ## 6. Working agreements for agents
 
 - Planning phase: docs first, no `frontend/` or `backend/` code until the user signs off. When coding starts: smallest diff that keeps P0 green on-device; D1 priority is the 3-model smoke test on THE device, not backend polish.
+- **D1 task 0 (gates everything): pin exact model asset IDs via `qvac registry` / HF `qvac` org into the single `TIER_ROSTER` constant** — TranslatePsy ES→EN + PT→EN pair IDs, VisionPsy-Flash weights + matched mmproj pair, OCR_LATIN detector/recognizer IDs, MedPsy-1.7B GGUF Q4_K_M file, GTE embedding ID — then sequential `load→infer→unload` smoke test. No screens before this is green.
 - Never add cloud AI calls, emulator-only flows, real hospital data, or clinical claims. Never put inference in `backend/`.
 - Prefer `read`/`edit`/`write` over shell for files; use `bash` for `qvac doctor`, `grep` gates, tests. Verify by running, don't assert from memory.
 - qvac-mcp tools available: `qvac_index` → `qvac_fetch`, `qvac_search`, `track_brief`/`track_detail`, `hackathon_rules`, `hackathon_plan`, `judge_feedback`, `qvac_compliance_check`. Re-fetch docs when unsure — training data may be stale.

@@ -4,8 +4,8 @@
 > Vocabulario locked: **inspección** = captura editable (siempre accesible/editable) · **informe** = reporte generado desde una inspección (generable/re-generable cuando quieras, con el tier que quieras).
 > Tiers (1 clic, preselección 🟢, mascotas en `assets/mascot-cibi|pro|super.png` + nombre honesto siempre visible):
 > **🟢 CIBI regular (on-device, siempre)**: TranslatePsy-EuroNano + VisionPsy-Nano-460M-Flash Q8_0 + OCR_LATIN + MedPsy-1.7B-Q4_K_M + GTE-small. Rápido, offline, el del video juzgado.
-> **🔵 CIBI Pro (peer QVAC)**: MedPsy-4B-Q8 (estructura dominio) + Qwen3.5-4B* (guía/fluidez). *Candidato verificado en HF pero falta pinnear ID exacto registry QVAC + quant + ctx + licencia + `qvac doctor` en peer.
-> **🟣 CIBI Super (peer QVAC)**: Qwen oficial grande* (razonamiento) + MedPsy-4B anclando entidades (Qwen nunca solo en entidades médicas). *Solo releases oficiales (ej. familia Qwen3.8-Flash oficial). Forks “Uncensored/Aggressive/HauhauCS” EXCLUIDOS: licencia de reempaque dudosa + copy “sin refusals” incompatible con framing equipo-médico + riesgo jurado + 27B (15–31GB) inviable 48h. Si se quiere 27B, que sea oficial Apache-2.0 + HW peer declarado.
+> **🔵 CIBI Pro (peer QVAC, P1 non-judged)**: MedPsy-4B-Q8 (estructura dominio) + Qwen3.5-4B (oficial Alibaba feb-2026, 4B multimodal, Apache-2.0 — viable en workstation). *Gate: pinnear GGUF exacto + quant + ctx + `qvac doctor` en peer antes de codificar.*
+> **🟣 CIBI Super (peer QVAC, P1, solo si HW lo permite)**: Qwen oficial grande + MedPsy-4B anclando entidades (Qwen nunca solo en entidades médicas). *Verificado: Qwen3.8-Flash oficial es MoE ~176B (`qwen-community-1.0`) — INVIABLE local en 48h; Super solo con variante densa oficial menor + HW declarado, si no se omite. Forks “Uncensored/Aggressive/HauhauCS” EXCLUIDOS.*
 > Mismo modelo puede hacer visión+texto solo si es variante multimodal oficial con projector; si no, VisionPsy-Flash sigue haciendo modalidad y Qwen razona sobre texto/OCR/candidato. Psy siempre en el loop (Track 2).
 
 ## 1. End-to-end inspection → report flow (the video arc)

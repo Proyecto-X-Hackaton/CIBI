@@ -7,6 +7,12 @@
 - Pill de tier en cada pantalla IA (`🟢 CIBI ▾`) + `ⓘ detalles` (bottom-sheet): mapeo tier→modelos exactos + quants + engine + HW + ctx + fallback activo. Offline badge siempre. Disclaimer: "Extracción de inventario de equipamiento. No es diagnóstico clínico." (chat/revisar/informe + README + slate video).
 - Switch idioma UI ES/EN (Ajustes): no toca pipeline.
 
+## ⓘ detalles — spec limpio (una sola fuente de verdad)
+- **Un solo componente** `TierDetailsSheet` + **una sola constante** `TIER_ROSTER` (tier → modelos[{nombre, registry_id, quant, engine/plugin, ctx, licencia}] + HW + fallback). Cero strings de modelos hardcodeados por pantalla: chat/revisar/informe/sedes/ajustes importan el mismo sheet.
+- **Contenido por tier** (ES, 1 scroll): header `🟢 CIBI · en tu teléfono` (o 🔵/🟣 + `peer <nombre> · verificado`); tabla modelos exactos; `HW: <device o workstation>`; `Modo: offline|peer`; `Fallback activo: …`; mini-resumen perf (últimos load/TTFT/throughput por modelo); licencias; nota `Datos demo sintéticos`.
+- **Apertura en 1 tap** desde cualquier pill de tier o `ⓘ`; en 🔵/🟣 bloqueados muestra qué peer/modelo falta para desbloquear. El mismo `TIER_ROSTER` alimenta README (tabla modelos), PDF (pie de procedencia) y `PERF_LOG.jsonl` (campos `tier/model/quant/engine`) — imposible que diverjan.
+- Mockups HTML: el `ⓘ` es un `<details>`/overlay estático con el mismo contenido; hallway-test verifica que un usuario lo abre en ≤1 tap.
+
 ## Backend alone (DRF, zero inference)
 - `GET /api/observations/:id/` replica `tier_cards[] + perf_spans[]` para verificar sin el teléfono. Gate clínico (F03, keyword 422) + `requirements.txt` sin IA.
 
@@ -25,5 +31,5 @@
 
 ## Acceptance (P0)
 - [ ] `PERF_LOG.jsonl` ≥1 fila por modelo Psy desde el device físico, con campo `tier`.
-- [ ] ⓘ detalles visible en chat/revisar/informe/ajustes con mapeo exacto.
+- [ ] ⓘ detalles visible en chat/revisar/informe/ajustes con mapeo exacto, renderizado desde el único `TIER_ROSTER` (mismo contenido en README/PDF/PERF_LOG).
 - [ ] `LICENSE` (MIT/Apache-2.0) + HW specs + setup + tabla remote-API ("none" IA; peers LAN declarados) en README.
