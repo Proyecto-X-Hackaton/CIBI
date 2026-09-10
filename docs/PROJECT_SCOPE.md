@@ -13,7 +13,7 @@ Single happy path (the only story the 5-min video tells):
 2. Snaps photo of equipment label/room (only where permitted) → **VisionPsy-Nano-460M-Flash** describes modality + **ONNX OCR** extracts label text.
 3. **MedPsy-1.7B** parses domain language (MR/CT/ultrasound, manufacturer, qty, age) into structured JSON with confidence per field: `Confirmed | Reported | Estimated | Unknown`.
 4. App asks 1–2 follow-up questions for the most valuable missing field, runs duplicate check, stores locally.
-5. Customer-360 + geo map + dashboard update instantly — with zero connectivity.
+5. Informe + Red + panel actualizados al instante — con cero conectividad.
 
 Optional enhancement, never a dependency: when the engineer explicitly trusts a reachable local QVAC peer, the phone can request a second structuring/guidance pass from a larger workstation model. The offline phone result remains available immediately and is never silently replaced.
 
@@ -27,7 +27,7 @@ Why it fuses without feeling forced: Track 1's brief *already asks* for conversa
 - [ ] F03 structuring: MedPsy → JSON `{customer, city, country, items[{modality, manufacturer, model, qty, age_text, age_years}]}`, per-field confidence
 - [ ] F04 validation: local catalog match + machine-specific photo priorities/staff questions + 1–2 follow-ups for the top missing field + duplicate warning (embedding similarity) + confidence chips
 - [ ] F05 offline store+sync: on-device SQLite queue → Django REST upsert when online; works fully offline
-- [ ] F06 Customer-360: one facility profile with items, confidence, freshness, observation history
+- [ ] F06 Informe: reporte versionado por sede con items, confianza, frescura, historial + PDF offline
 - [ ] F07 geo map: Region → Country → City → Customer drill-down (static tiles / offline list + map when online)
 - [ ] F08 dashboard lite: counts by modality, aging (>7y), incomplete, recently updated + 1 NL query ("clientes en Brasil con MR de más de 7 años")
 - [ ] F09 perf log + safety: structured log (model load, prompts, tokens, TTFT, throughput) + "no es diagnóstico clínico" disclaimer + offline badge
@@ -59,7 +59,7 @@ Why it fuses without feeling forced: Track 1's brief *already asks* for conversa
 
 ## 4. Biggest risks (jury-weighted order)
 1. **Technical-35%: 3 small models on one phone.** Mitigation: sequential load→infer→unload, Flash variant (64 visual tokens), Q4 quantizations, declared fallback to 2 models (TranslatePsy + VisionPsy) if MedPsy chokes. D1 is entirely this.
-2. **Scope-48h:** Mitigation: P0 above is the ceiling. Two screens for capture, one for 360, one for map/dashboard. Nothing else.
+2. **Scope-48h:** Mitigation: P0 above is the ceiling. Two screens for capture, one for informe, one for red/panel. Nothing else.
 3. **MedPsy framing:** Mitigation: never diagnose; say "extracción de entidades de equipamiento" in every doc + UI + video.
 4. **Video story:** Mitigation: one arc — "una visita se vuelve inteligencia confiable, sin conexión".
 

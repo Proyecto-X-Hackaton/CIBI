@@ -15,7 +15,7 @@
 | T1.3 | MVP: NL capture, extraction, storage, customer view, aggregation | F01, F03, F05, F06, F08 | Demo script |
 | T2.1 | ≥1 Psy model central, not cosmetic | 3 Psy models ARE steps 1–3 of the pipeline | F01–F03 + model cards in UI |
 | T2.2 | `@qvac/sdk` for ALL core inference + RAG | Phone baseline uses `@qvac/sdk`; optional peer must also use `@qvac/sdk` through verified QVAC/P2P delegation. No Python inference and no arbitrary HTTP proxy. | package/code search + peer path review |
-| T2.3 | Useful offline on declared consumer HW | Airplane-mode capture→360 works without the peer; peer mode is a non-blocking enhancement. | F05 + F09 + F10 + video offline segment |
+| T2.3 | Useful offline on declared consumer HW | Airplane-mode capture→informe works without the peer; peer mode is a non-blocking enhancement. | F05 + F09 + F10 + video offline segment |
 | T2.4 | Disclose all remote APIs / third parties | README lists Expo, DRF host, QVAC/P2P transport/relay if used, and workstation peer; no online search or cloud fallback. | README + F10 |
 | T2.5 | Open permissive license REQUIRED | MIT (or Apache-2.0) `LICENSE` file | LICENSE |
 | T2.6 | Setup + HW specs for reproducibility | README setup + `qvac doctor` output + device label | README + F09 |

@@ -8,7 +8,7 @@
 |---|---|---|
 | Mobile app | **React Native + Expo SDK 54** (`blank-typescript@sdk-54`), TypeScript | Only QVAC mobile path (JS/TS SDK → Expo). Web-capable for dashboard fallback, but **judged flow runs on a physical device** (llamacpp cannot run on emulators). |
 | On-device AI | **`@qvac/sdk` (^0.7.0) in the app, nothing else** | Track 2 literal requirement. The phone is the complete, judged offline path; all core inference + RAG works without a network. |
-| Optional trusted peer | **Separate QVAC peer runner on the workstation** | P1 quality enhancement only. It may run larger local models through the supported QVAC/P2P path; it is never Django, never cloud, and never required for capture→360. |
+| Optional trusted peer | **Separate QVAC peer runner on the workstation** | P1 quality enhancement only. It may run larger local models through the supported QVAC/P2P path; it is never Django, never cloud, and never required for capture→informe. |
 | Backend | **Python + Django REST Framework** | Team choice. Role is **structured repository + sync + aggregation ONLY (zero inference)**. Cloud-hosting a non-inference API is explicitly allowed. Provides admin + ORM for Customer/Observation/Equipment fast. |
 | On-device store | **expo-sqlite (queue + cache) → DRF / Postgres (or SQLite on server for 48h)** | Offline-first: capture works with airplane mode; sync upserts when online. |
 | Map | Offline list drill-down first; `react-native-maps` tiles only as enhancement | Basement has no tiles; list must carry the demo. |
@@ -66,11 +66,13 @@ PHONE (Expo + @qvac/sdk)          OPTIONAL PEER (workstation)       DRF SERVER
 ## 5. API contract (DRF owns storage, app owns intelligence)
 
 ```
-POST /api/visits/                 {customer_name, city, country, observed_at, author}
-POST /api/observations/           {visit_id, raw_text_original, raw_text_en, photo_ref,
+POST /api/inspections/            {customer_name, city, country, observed_at, author}
+POST /api/planned-visits/         {client_uuid, site_id, date_label: manana|prox_semana|fecha, date, reason, status: planned|done|cancelled, synthetic:true}
+GET  /api/planned-visits/         → lista para "Esta semana" (orden por fecha)
+POST /api/observations/           {inspection_id, raw_text_original, raw_text_en, photo_ref,
                                    structured_json, confidence_map, model_cards[], perf_spans[],
                                    inference_provenance}
-GET  /api/customers/:id/360/      → aggregated items + confidence + freshness + history
+GET  /api/reports/:id/          → informe: items + confianza + frescura + historial de versiones
 GET  /api/geo/?level=country|city → drill-down aggregates
 GET  /api/dashboard/summary/      → by_modality, aging_7y+, incomplete, recent
 POST /api/sync/push/  +  GET /api/sync/pull/?since=
@@ -82,5 +84,6 @@ Every `structured_json` carries `confidence: Confirmed|Reported|Estimated|Unknow
 
 ## 6. Data entities (mirrors Track 1 §2 field list)
 `Customer(facility, city, country)` → `Visit` → `Observation(raw, normalized, author, date, source_type)` → `EquipmentItem(modality, manufacturer, model, qty, age_text, age_years, confidence, freshness)` + `PerfSpan(model, quant, device, mode, load_ms, ttft_ms, tokens_in/out, throughput_tps)`.
+`PlannedVisit(planned_uuid, site_id, date_label, date, reason, status:planned|done|cancelled, synthetic:true)` es compromiso local (sin calendario OS en P0): se crea con 1 tap desde Sedes, vive en SQLite + outbox, sube por CRUD. Completarla = iniciar inspección linkeada (`inspection.planned_uuid`).
 
 `EquipmentCatalogEntry(entry_id, modality, manufacturer, family, aliases, point_of_interest[], photo_priority[], staff_question[], age_marker[], catalog_version)` is bundled locally and is reference knowledge, not a hospital observation. Catalog matches and guidance are deterministic facts first; a model may summarize them but may not invent missing machine-specific facts.
