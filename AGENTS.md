@@ -22,7 +22,7 @@ Track map: General = basement-no-signal + sensitive data never leaves phone. Tra
 | Layer | Choice |
 |---|---|
 | App | React Native + Expo SDK 54, TypeScript (`blank-typescript@sdk-54`) |
-| On-device AI | `@qvac/sdk` (^0.7.0) **only — owns ALL judged inference + RAG** |
+| On-device AI | `@qvac/sdk` (^0.19.0, verified 2026-09-10) **only — owns ALL judged inference + RAG** |
 | Backend | Python + Django REST — **CRUD/sync/aggregates ONLY, zero inference** |
 | Stores | `expo-sqlite` outbox on-device → DRF + Postgres (SQLite OK for 48h) |
 
@@ -47,7 +47,7 @@ SQLite outbox ──HTTP JSON──────────▶  NEVER calls any 
 - **VisionPsy Flash vs Base**: separate weights+mmproj pairs. Flash → `image_no_upscale:'on'`; Base (`_1`-suffixed) → flag unset. Mismatch silently degrades.
 - RAG built-in workspace (`ragIngest`/`ragSearch`) is **prototype-only** per docs — fine here, disclose it.
 - Env: Node ≥22.17, Python ≥3.10, `qvac doctor` green.
-- Model roster: TranslatePsy-EuroNano (Bergamot ES/PT→EN) · VisionPsy-Nano-460M-Flash Q8_0 (try Q4_K_M if RAM-bound) · ONNX OCR_LATIN · Parakeet-TDT or Whisper+Silero VAD (voice is stretch — typed input is the fallback) · MedPsy-1.7B-GGUF Q4_K_M (fallback: TranslatePsy+VisionPsy+regex, disclosed) · small GTE embedding for dedup.
+- Model roster (exact constants, verified SDK 0.19.0 — canonical table in TECH_STACK §4): `BERGAMOT_ES_EN`/`BERGAMOT_PT_EN` · `VISIONPSY_NANO_460M_MULTIMODAL_Q8_0`+mmproj pair (Flash, `image_no_upscale:'on'`; `_1` pair = Base) · `OCR_LATIN` · `PARAKEET_TDT_0_6B_V3_Q8_0` (voice stretch, typed is P0) · `HEALTHCARE_1_7B_MEDICAL_Q4_K_M` (= MedPsy-1.7B) · `GTE_LARGE_FP16` · peer: `HEALTHCARE_4B_MEDICAL_Q4_K_M` + Qwen3.5-4B GGUF.
 
 ## 4. Non-negotiable compliance checklist
 

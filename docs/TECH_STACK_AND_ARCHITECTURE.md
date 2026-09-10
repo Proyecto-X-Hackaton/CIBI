@@ -7,7 +7,7 @@
 | Layer | Choice | Why |
 |---|---|---|
 | Mobile app | **React Native + Expo SDK 54** (`blank-typescript@sdk-54`), TypeScript | Only QVAC mobile path (JS/TS SDK → Expo). Web-capable for dashboard fallback, but **judged flow runs on a physical device** (llamacpp cannot run on emulators). |
-| On-device AI | **`@qvac/sdk` (^0.7.0) in the app, nothing else** | Track 2 literal requirement. The phone is the complete, judged offline path; all core inference + RAG works without a network. |
+| On-device AI | **`@qvac/sdk` (^0.19.0) in the app, nothing else** | Track 2 literal requirement. The phone is the complete, judged offline path; all core inference + RAG works without a network. |
 | Optional trusted peer | **Separate QVAC peer runner on the workstation** | P1 quality enhancement only. It may run larger local models through the supported QVAC/P2P path; it is never Django, never cloud, and never required for capture→informe. |
 | Backend | **Python + Django REST Framework** | Team choice. Role is **structured repository + sync + aggregation ONLY (zero inference)**. Cloud-hosting a non-inference API is explicitly allowed. Provides admin + ORM for Customer/Observation/Equipment fast. |
 | On-device store | **expo-sqlite (queue + cache) → DRF / Postgres (or SQLite on server for 48h)** | Offline-first: capture works with airplane mode; sync upserts when online. |
@@ -50,18 +50,19 @@ PHONE (Expo + @qvac/sdk)          OPTIONAL PEER (workstation)       DRF SERVER
 - **Peer boundary**: the phone's local result is returned immediately; an optional peer result is an enhancement with a timeout and automatic local fallback. The peer must not make the offline workflow dependent on a network.
 - Node ≥22.17, Python ≥3.10, `qvac doctor` green on the phone and workstation.
 
-## 4. Model roster (honest names — placeholders until `qvac registry` pins exact constants)
+## 4. Model roster (exact `@qvac/sdk` constants — verified against SDK 0.19.0 registry, 2026-09-10)
 
-| Role | Model | Quant | Runs on | Fallback |
-|---|---|---|---|---|
-| Normalize ES/PT→EN | TranslatePsy-EuroNano (Bergamot `BERGAMOT_ES_EN`, `BERGAMOT_PT_EN` or Fabric-LLM pair) | intgemm bin | phone CPU/GPU | keep original text, flag `untranslated` |
-| See label/room | VisionPsy-Nano-460M-**Flash** (`VISIONPSY_NANO_460M_MULTIMODAL_Q8_0` + matching `MMPROJ_…`, `image_no_upscale:'on'`) | Q8_0 (try Q4_K_M if RAM-bound) | phone GPU, else CPU | OCR-only path |
-| Read label text | ONNX OCR (`OCR_LATIN`: `detector_craft.onnx` + `recognizer_latin.onnx`) | ONNX | phone CPU | VisionPsy description only |
-| Hear engineer | Parakeet-TDT multilingual (~750MB) **or** Whisper-small + Silero VAD | Q8_0 / bin | phone | typed input (voice is stretch) |
-| Structure entities | MedPsy-1.7B-GGUF (`hf://qvac/MedPsy-1.7B-GGUF`) | Q4_K_M | phone | VisionPsy+regex structuring, disclose downgrade |
-| Optional higher-quality structuring | MedPsy-4B-GGUF (exact QVAC registry identifier) | exact quant + tested context; **80k is a workstation benchmark, not a promise** | trusted workstation peer | phone MedPsy-1.7B result |
-| Optional best-quality comparison | Exact Qwen model identifier (the planned “Qwen 3.8” label must be resolved to the official name) | exact quant + tested context; **200k is a benchmark setting** | trusted workstation peer | MedPsy-4B or phone result |
-| Dedup / NL filter | GTE-small-class embedding (`GTE_*` small) + built-in RAG workspace | Q8 / FP16 | phone | keyword overlap scoring |
+| Role | Constant (`@qvac/sdk`) | Resolves to | Size | Runs on | Fallback |
+|---|---|---|---|---|---|
+| Normalize ES→EN | `BERGAMOT_ES_EN` (engine `nmtcpp-translation`) | `bergamot-esen … intgemm.bin` | ~32MB | phone CPU | keep original, flag `untranslated` |
+| Normalize PT→EN | `BERGAMOT_PT_EN` | `bergamot-pten … intgemm.bin` | ~32MB | phone CPU | same |
+| See label/room | `VISIONPSY_NANO_460M_MULTIMODAL_Q8_0` + `MMPROJ_VISIONPSY_NANO_460M_MULTIMODAL_Q8_0`, `image_no_upscale:'on'` | `qvac/VisionPsy-Nano-460M-Flash-GGUFs` pair | ~437+109MB | phone GPU, else CPU | OCR-only path |
+| Read label text | `OCR_LATIN` (engine `ggml-ocr`) | `latin_g2.gguf` | ~15MB | phone CPU | VisionPsy description only |
+| Hear engineer (stretch) | `PARAKEET_TDT_0_6B_V3_Q8_0` | parakeet-tdt-0.6b-v3 | ~750MB | phone | typed input (voice is stretch) |
+| Structure entities | `HEALTHCARE_1_7B_MEDICAL_Q4_K_M` (= `qvac/MedPsy-1.7B-GGUF` → `medpsy-1.7b-q4_k_m-imat.gguf`) | llamacpp, ctx 4096 | ~1.28GB | phone | VisionPsy+regex structuring, disclose downgrade |
+| Optional peer structuring | `HEALTHCARE_4B_MEDICAL_Q4_K_M` (= MedPsy-4B, 2.7GB; Q8_0 = 4.7GB) | exact ctx tested on peer | 2.7–4.7GB | trusted workstation peer | phone 1.7B result |
+| Optional peer fluency | Qwen3.5-4B GGUF (`lmstudio-community/Qwen3.5-4B-GGUF`, Apache-2.0) | exact file+quant pinned at peer setup | ~2–3GB | trusted workstation peer | MedPsy-4B or phone result |
+| Dedup / NL filter | `GTE_LARGE_FP16` (engine `llamacpp-embedding`, 1024-dim) | gte-large fp16 | ~670MB | phone | keyword overlap scoring |
 
 ## 5. API contract (DRF owns storage, app owns intelligence)
 

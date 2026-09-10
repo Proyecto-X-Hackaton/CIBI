@@ -21,10 +21,10 @@
 
 ## QVAC calls (qué logueamos — JSONL, 1 fila por span)
 ```json
-{"ts":"2026-09-10T14:02:11Z","device":"Galaxy S25 Ultra (SM-S938B)","tier":"CIBI","model":"qvac/MedPsy-1.7B-GGUF","quant":"Q4_K_M","engine":"llamacpp-completion","phase":"load|translate|completion|ocr|embed|ragSearch","prompt_chars":412,"tokens_in":0,"tokens_out":187,"ttft_ms":940,"throughput_tps":11.4,"load_ms":3200,"ctx_size":4096,"image_no_upscale":"on","mode":"offline|peer","peer_id":null,"ok":true}
+{"ts":"2026-09-10T14:02:11Z","device":"Android 13 · 12GB RAM (test device, Build.MODEL logged at smoke test)","tier":"CIBI","model":"HEALTHCARE_1_7B_MEDICAL_Q4_K_M","quant":"Q4_K_M","engine":"llamacpp-completion","phase":"load|translate|completion|ocr|embed|ragSearch","prompt_chars":412,"tokens_in":0,"tokens_out":187,"ttft_ms":940,"throughput_tps":11.4,"load_ms":3200,"ctx_size":4096,"image_no_upscale":"on","mode":"offline|peer","peer_id":null,"ok":true}
 ```
 - Fuentes: eventos `loadModel` (load_ms), `completion().events` (tokens/TTFT/throughput), `translate().stats`, confianzas `ocr()`.
-- Rosters exactos (canónico en F10): 🟢 on-device (TranslatePsy-EuroNano + VisionPsy-Flash-Q8 + OCR_LATIN + MedPsy-1.7B-Q4_K_M + GTE-small); 🔵/🟣 peer (MedPsy-4B-Q8 + Qwen oficial pineado; forks Uncensored excluidos — ver F10).
+- Rosters exactos (canónico en TECH_STACK §4): 🟢 on-device (`BERGAMOT_*` + `VISIONPSY_NANO_460M_MULTIMODAL_Q8_0` + `OCR_LATIN` + `HEALTHCARE_1_7B_MEDICAL_Q4_K_M` + `GTE_LARGE_FP16`); 🔵/🟣 peer (`HEALTHCARE_4B_MEDICAL_*` + Qwen oficial pineado; forks Uncensored excluidos — ver F10).
 
 ## Schema
 `PerfSpan{ts, device, tier, model, quant, engine, phase, tokens_in/out, ttft_ms, throughput_tps, load_ms, ctx_size, mode, peer_id, ok}`.

@@ -16,7 +16,7 @@
 `text_en + hints visión/lectura → JSON on-device (🟢) → check local → outbox → POST → [opcional peer 🔵/🟣: 2ª pasada → diff → usuario elige v+1] → informes agregan` — la extracción nunca es cómputo del server.
 
 ## QVAC calls
-- 🟢: `loadModel({modelSrc:'hf://qvac/MedPsy-1.7B-GGUF', modelType:'llm', modelConfig:{ctx_size:4096}})` → `completion()` → `unloadModel`.
+- 🟢: `loadModel({modelSrc: HEALTHCARE_1_7B_MEDICAL_Q4_K_M, modelType:'llm', modelConfig:{ctx_size:4096}})` (= `qvac/MedPsy-1.7B-GGUF` → `medpsy-1.7b-q4_k_m-imat.gguf`, ~1.28GB, Q4_K_M) → `completion()` → `unloadModel`.
 - 🔵/🟣 (peer, P1): mismo pipeline de captura on-device; el peer recibe `{text_en, ocr_blocks, vision_summary, candidate_json, catalog_ids}` y devuelve 2º candidato (MedPsy-4B anclando + Qwen razonando). Qwen nunca estructura solo.
 - Spans con `{tier, model, quant, ctx, ttft, throughput}` → F09.
 
