@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>06 Panel — mockup</title>
+<style>
+:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E;--blue:#3B82F6;--amber:#F59E0B;--purple:#A78BFA}
+*{box-sizing:border-box}
+body{background:#0A0A0E;display:flex;justify-content:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px;color:var(--text)}
+.phone{width:390px;height:844px;background:var(--bg);border:1px solid #33333F;border-radius:44px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.6);flex-shrink:0}
+.screen{background:var(--bg);border-radius:34px;height:100%;display:flex;flex-direction:column;overflow:hidden}
+.statusbar{display:flex;justify-content:space-between;align-items:center;padding:14px 24px 2px;font-size:13px;font-weight:600}
+.appbar{padding:8px 16px 0}.brandrow{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.brand{font-weight:800;font-size:15px;letter-spacing:.3px}
+.pill{font-size:11px;font-weight:700;background:rgba(34,197,94,.14);color:var(--green);border:1px solid rgba(34,197,94,.45);border-radius:20px;padding:5px 10px;white-space:nowrap}
+.scroll{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+h1{font-size:22px;margin:0}.sub{font-size:13px;color:var(--muted);margin:4px 0 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
+.card h3{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:0 0 12px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.kpi{background:#0B0B0F;border:1px solid var(--border);border-radius:14px;padding:12px}
+.kpi .n{font-size:22px;font-weight:800}.kpi .l{font-size:11px;color:var(--muted);margin-top:2px}
+.bar-row{display:flex;align-items:center;gap:10px;font-size:13px;margin:8px 0}
+.bar-row .lbl{width:110px;color:#D6D6DE;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bar{flex:1;height:10px;background:#0B0B0F;border:1px solid #33333F;border-radius:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--green)}
+.bar i.amber{background:var(--amber)}.bar i.blue{background:var(--blue)}.bar i.purple{background:var(--purple)}
+.bar-row .v{width:36px;text-align:right;font-weight:700}
+.alert{background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.5);border-radius:12px;padding:12px;font-size:13px;line-height:1.55}
+.ok{background:rgba(34,197,94,.08);border:1px solid rgba(34,197,94,.4);border-radius:12px;padding:12px;font-size:13px;line-height:1.55}
+.small{font-size:12px;color:var(--muted);line-height:1.5}
+.btnrow{display:flex;gap:8px}
+.btn{flex:1;border:0;border-radius:12px;padding:13px;font-size:14px;font-weight:800}
+.btn.primary{background:var(--green);color:#04120A}
+.btn.ghost{background:transparent;color:var(--green);border:1px solid rgba(34,197,94,.5)}
+.fine{font-size:11px;color:#8A8A95;line-height:1.5;text-align:center}
+.tabbar{display:flex;border-top:1px solid var(--border);background:#101016;padding:8px 4px 18px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#6E6E78;gap:3px}
+.tab span{font-size:19px;line-height:1}
+.tab.active{color:var(--green);font-weight:700}
+</style></head>
+<body><div class="phone"><div class="screen">
+<div class="statusbar"><span>9:41</span><span>📶 📡 🔋</span></div>
+<div class="appbar"><div class="brandrow"><span class="brand">CIBI</span><span class="pill">● SIN CONEXIÓN · 2 pendientes</span></div></div>
+<div class="scroll">
+<div><h1>Panel</h1><p class="sub">Cómo está mi red · agregados offline · datos sintéticos</p></div>
+<div class="kpis">
+<div class="kpi"><div class="n">12</div><div class="l">🏥 sedes visitadas</div></div>
+<div class="kpi"><div class="n">103</div><div class="l">🔧 equipos (MR/CT/US)</div></div>
+<div class="kpi"><div class="n" style="color:var(--amber)">6</div><div class="l">⚠ MR &gt;7 años (renovar)</div></div>
+<div class="kpi"><div class="n" style="color:var(--green)">10 / 2</div><div class="l">SYNCED / PENDING</div></div>
+</div>
+<div class="card"><h3>Parque por tipo (informes vX)</h3>
+<div class="bar-row"><span class="lbl"><b>MR</b></span><div class="bar"><i style="width:33%"></i></div><span class="v">34</span></div>
+<div class="bar-row"><span class="lbl"><b>CT</b></span><div class="bar"><i class="blue" style="width:20%"></i></div><span class="v">21</span></div>
+<div class="bar-row"><span class="lbl"><b>Ultrasonido</b></span><div class="bar"><i class="purple" style="width:47%"></i></div><span class="v">48</span></div>
+<p class="small" style="margin:8px 0 0">Fuente: SQLite local + agregados DRF · cero inferencia · se actualiza sin conexión.</p></div>
+<div class="card"><h3>Confianza (entidades MedPsy)</h3>
+<div class="bar-row"><span class="lbl">Confirmed</span><div class="bar"><i style="width:55%"></i></div><span class="v">55%</span></div>
+<div class="bar-row"><span class="lbl">Reported</span><div class="bar"><i class="blue" style="width:25%"></i></div><span class="v">25%</span></div>
+<div class="bar-row"><span class="lbl">Estimated</span><div class="bar"><i class="amber" style="width:20%"></i></div><span class="v">20%</span></div></div>
+<div class="alert">💡 <b>Oportunidad:</b> 6 MR de 8–10 años en 3 sedes → ofrecer renovación a ingeniería clínica.<br><span class="small">3 informes &gt;180 días → re-verificar en próxima visita.</span></div>
+<div class="ok">✅ Todo calculado en este teléfono · sin conexión · <span class="small">inspecciones editables en Inicio · detalle por sede en Red</span></div>
+<div class="btnrow"><button class="btn primary">Ver sedes</button><button class="btn ghost">Exportar resumen PDF</button></div>
+<p class="fine">Extracción de inventario de equipamiento.<br>No es diagnóstico clínico.</p>
+</div>
+<div class="tabbar"><div class="tab"><span>🏠</span>Inicio</div><div class="tab active"><span>📊</span>Panel</div><div class="tab"><span>🗺️</span>Red</div><div class="tab"><span>⚙️</span>Ajustes</div></div>
+</div></div></body></html>

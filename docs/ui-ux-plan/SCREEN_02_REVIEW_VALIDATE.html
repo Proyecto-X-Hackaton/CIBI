@@ -2,7 +2,7 @@
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>02 Revisión — mockup</title>
 <style>
-:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E}
+:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E;--purple:#A78BFA}
 *{box-sizing:border-box}
 body{background:#0A0A0E;display:flex;justify-content:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px;color:var(--text)}
 .phone{width:390px;height:844px;background:var(--bg);border:1px solid #33333F;border-radius:44px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.6);flex-shrink:0}
@@ -15,7 +15,11 @@ body{background:#0A0A0E;display:flex;justify-content:center;font-family:system-u
 .back{font-size:13px;color:var(--muted);text-decoration:none}
 .steps{padding:10px 16px 0;flex:1}.steplabel{font-size:12px;color:var(--muted);margin-bottom:6px;display:flex;justify-content:space-between}
 .track{height:6px;background:#22222C;border-radius:4px;overflow:hidden}.fill{height:100%;background:var(--green);border-radius:4px;width:100%}
-.scroll{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
+.tierbar{display:flex;gap:6px;padding:10px 16px 0}
+.tier{flex:1;font-size:11px;font-weight:700;border-radius:12px;padding:7px 4px;text-align:center;border:1px solid #34343F;background:#1A1A24;color:#D6D6DE}
+.tier.on{border-color:var(--green);background:rgba(34,197,94,.12);color:var(--green)}
+.tier.lock{opacity:.45}
+.scroll{flex:1;overflow-y:auto;padding:12px 16px 16px;display:flex;flex-direction:column;gap:14px}
 h1{font-size:22px;margin:0}.sub{font-size:13px;color:var(--muted);margin:4px 0 0}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
 .card h3{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:0 0 12px}
@@ -35,26 +39,34 @@ tr:last-child td{border-bottom:0}
 .cta{background:var(--green);color:#04120A;border:0;border-radius:14px;min-height:54px;font-weight:800;font-size:15px;width:100%}
 .ghost{background:transparent;border:1px solid #3A3A45;color:#fff;border-radius:14px;min-height:48px;font-size:14px;width:100%}
 .chip{font-size:11px;background:#23232D;border:1px solid #34343F;border-radius:12px;padding:4px 10px;color:#D6D6DE}
+tr.rowlink{cursor:pointer}tr.rowlink td:last-child::after{content:" ›";color:var(--muted)}
+.detail{background:#0B0B0F;border:1px solid #3A3A45;border-radius:12px;padding:12px;margin-top:10px;font-size:12.5px;line-height:1.65}
+.detail b{color:#fff}.detail .row{display:flex;justify-content:space-between;gap:8px;padding:3px 0;border-bottom:1px solid #22222C}
+.detail .row:last-child{border-bottom:0}
+.detail .mini{display:flex;gap:8px;margin-top:10px}
+.detail .mini button{flex:1;background:#1E1E28;border:1px solid #3A3A45;color:#fff;border-radius:10px;padding:9px;font-size:12px}
 .fine{font-size:11px;color:#8A8A95;line-height:1.5;text-align:center}
 </style></head>
 <body><div class="phone"><div class="screen">
 <div class="statusbar"><span>9:41</span><span>📶 📡 🔋</span></div>
-<div class="appbar"><div class="brandrow"><span class="brand">CIBI · Visita</span><span class="pill">● SIN CONEXIÓN</span></div></div>
-<div class="wizbar"><a class="back">‹ Volver al chat</a><div class="steps" style="padding:0"><div class="steplabel"><span>Paso 2 de 2 — Revisar y validar</span><span>Borrador ●</span></div><div class="track"><div class="fill"></div></div></div></div>
+<div class="appbar"><div class="brandrow"><span class="brand">CIBI · Inspección</span><span class="pill">● SIN CONEXIÓN</span></div></div>
+<div class="wizbar"><a class="back">‹ Volver al chat</a><div class="steps" style="padding:0"><div class="steplabel"><span>Paso 2 de 2 — Revisar inspección</span><span>Borrador ●</span></div><div class="track"><div class="fill"></div></div></div></div>
+<div class="tierbar"><div class="tier on">🟢 CIBI</div><div class="tier lock">🔵 CIBI Pro 🔒</div><div class="tier lock">🟣 CIBI Super 🔒</div></div>
 <div class="scroll">
-<div><h1>Revisar extracción</h1><p class="sub">MedPsy-1.7B-Q4 · TTFT 0.9s · 11.4 t/s · del chat ↓</p></div>
-<div class="card"><h3>Equipos detectados (del chat)</h3><table>
+<div><h1>Revisar inspección</h1><p class="sub">🟢 CIBI · del chat ↓ · <a style="color:inherit">ⓘ detalles</a></p></div>
+<div class="card"><h3>Equipos detectados · toca una fila para ver detalle</h3><table>
 <tr><th>Equipo</th><th>Cant.</th><th>Edad</th><th>Conf.</th></tr>
-<tr><td><b>MR</b></td><td>3</td><td>8–10 a (2 uds)</td><td><span class="conf rep">Reported</span></td></tr>
-<tr><td><b>MR-2</b></td><td>1</td><td>placa OCR 0.91</td><td><span class="conf con">Confirmed</span></td></tr>
-<tr><td><b>CT</b></td><td>2</td><td>—</td><td><span class="conf unk">Unknown</span></td></tr>
-<tr><td><b>US</b></td><td>4</td><td>mixta</td><td><span class="conf est">Estimated</span></td></tr></table>
-<p class="small" style="margin:12px 0 0">Origen: chat ES→EN + OCR “…MAGNETOM…” (0.91) · Visión: modalidad MR ✓ <span class="chip">MedPsy-1.7B</span> <span class="chip">VisionPsy-Flash-Q8</span></p></div>
+<tr class="rowlink"><td><b>MR</b> ×3</td><td>3</td><td>8–10 a (2 uds)</td><td><span class="conf rep">Reported</span></td></tr>
+<tr class="rowlink"><td><b>MR-2</b> ✓</td><td>1</td><td>placa 0.91</td><td><span class="conf con">Confirmed</span></td></tr>
+<tr class="rowlink"><td><b>CT</b> ×2</td><td>2</td><td>—</td><td><span class="conf unk">Unknown</span></td></tr>
+<tr class="rowlink"><td><b>US</b> ×4</td><td>4</td><td>mixta</td><td><span class="conf est">Estimated</span></td></tr></table>
+<div class="detail"><b>MR-2 · Resonancia magnética</b> <span class="conf con">Confirmed</span><div class="row"><span>Marca</span><b>Fabricante X · familia Y</b></div><div class="row"><span>Modelo</span><b>Serie leída en placa (texto 0.91)</b></div><div class="row"><span>Cantidad / edad</span><b>1 ud · 8–10 años</b></div><div class="row"><span>Confianza por campo</span><b>tipo Confirmed · marca Reported · edad Estimated</b></div><div class="row"><span>Origen</span><b>chat ES→EN + foto placa · 🟢 CIBI</b></div><div class="mini"><button>✏️ Editar</button><button>📷 Añadir foto</button><button>❓ Preguntar</button></div></div>
+<p class="small" style="margin:12px 0 0">Tabla compacta para encajar en pantalla; el detalle expande nombre completo + marca + modelo + confianza por campo + origen + foto. <span class="chip">🟢 CIBI</span></p></div>
 <div class="warn"><b>⚠️ Posible duplicado</b><br>Este MR coincide 0.88 con “MR-2 reportado en junio”.<div class="actions"><a>Ver</a><a>Fusionar</a><a>Mantener ambos</a></div></div>
-<div class="q">🤖 Falta lo más valioso (1/2): <b>¿Fabricante de los CT?</b><br><span class="small">Responder mejora Unknown → Reported. O vuelve al chat para preguntarle al experto.</span>
+<div class="q">🤖 Falta lo más valioso (1/2): <b>¿Fabricante de los CT?</b><br><span class="small">Responder mejora Unknown → Reported. O vuelve al chat.</span>
 <div class="rowbtns"><input class="answer" placeholder="Ej. Fabricante X…"><button class="skip">Saltar</button></div></div>
-<button class="cta">Confirmar y guardar → ver ficha</button>
+<button class="cta">Guardar inspección → generar informe</button>
 <button class="ghost">Guardar borrador y salir a Inicio</button>
-<p class="fine">Extracción de inventario de equipamiento.<br>No es diagnóstico clínico.</p>
+<p class="fine">La inspección queda editable aunque ya tenga informe. El informe se genera/re-genera con el asistente que elijas.<br>Extracción de inventario de equipamiento. No es diagnóstico clínico.</p>
 </div>
 </div></div></body></html>

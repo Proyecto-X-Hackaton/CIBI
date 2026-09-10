@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>04 Red + Dashboard — mockup</title>
+<title>04 Próxima acción y sedes — mockup</title>
 <style>
 :root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E;--amber:#F59E0B}
 *{box-sizing:border-box}
@@ -15,38 +15,58 @@ body{background:#0A0A0E;display:flex;justify-content:center;font-family:system-u
 h1{font-size:22px;margin:0}.sub{font-size:13px;color:var(--muted);margin:4px 0 0}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
 .card h3{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:0 0 12px}
-.crumb{font-size:13px;line-height:1.7;color:#C9C9D4}.crumb b{color:#fff}.crumb a{color:var(--green)}
-.kpi{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.kpi .cell{background:#0B0B0F;border:1px solid var(--border);border-radius:12px;padding:14px 8px;text-align:center}
-.kpi b{font-size:22px;display:block}.kpi span{font-size:11px;color:var(--muted)}
-.opp{background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.5);border-radius:14px;padding:14px;font-size:13px;line-height:1.6}
-.opp b{color:#FBBF24}.opp a{color:#FBBF24}
-.query{width:100%;background:#0B0B0F;color:#fff;border:1px solid #3A3A45;border-radius:12px;padding:12px;font-size:14px}
+.sect{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:4px 0 -6px}
+.hero{background:rgba(245,158,11,.10);border:1px solid rgba(245,158,11,.5);border-radius:16px;padding:16px;font-size:13px;line-height:1.6}
+.hero b{color:#FBBF24}.hero .meta{font-size:12px;color:var(--muted)}
+.btnrow{display:flex;gap:8px;margin-top:12px}
+.btn{flex:1;border:0;border-radius:10px;padding:11px;font-size:13px;font-weight:700}
+.btn.primary{background:var(--green);color:#04120A}
+.btn.ghost{background:transparent;color:var(--green);border:1px solid rgba(34,197,94,.5)}
+.search{width:100%;background:#0B0B0F;color:#fff;border:1px solid #3A3A45;border-radius:12px;padding:12px;font-size:14px}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:12px;font-weight:600;border:1px solid #3A3A45;background:#0B0B0F;color:var(--muted);border-radius:20px;padding:7px 11px}
+.chip.on{background:rgba(34,197,94,.15);color:var(--green);border-color:rgba(34,197,94,.5)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:12px 2px;border-bottom:1px solid var(--border);font-size:13px}
+.row:last-child{border-bottom:0}
+.row small{display:block;color:var(--muted);font-size:11px;margin-top:3px;line-height:1.5}
+.row .go{color:var(--green);font-weight:700;white-space:nowrap}
+.badge{font-size:10px;font-weight:700;border-radius:12px;padding:2px 7px;margin-left:6px}
+.badge.stale{background:rgba(245,158,11,.15);color:var(--amber);border:1px solid rgba(245,158,11,.4)}
+.badge.ok{background:rgba(34,197,94,.12);color:var(--green);border:1px solid rgba(34,197,94,.4)}
+.qchips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
 .result{display:flex;gap:10px;font-size:13px;line-height:1.55;padding:10px 0;border-top:1px solid var(--border)}
 .small{font-size:12px;color:var(--muted);line-height:1.5}
 .fine{font-size:11px;color:#8A8A95;line-height:1.5;text-align:center}
-.tabbar{display:flex;border-top:1px solid var(--border);background:#101016;padding:10px 4px 20px}
-.tab{flex:1;text-align:center;font-size:10px;color:#6E6E78}.tab span{display:block;font-size:19px;margin-bottom:2px}
+.maplink{font-size:12px;color:var(--muted);text-align:center}.maplink a{color:var(--green)}
+.tabbar{display:flex;border-top:1px solid var(--border);background:#101016;padding:8px 4px 18px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#6E6E78;gap:3px}
+.tab span{font-size:19px;line-height:1}
 .tab.active{color:var(--green);font-weight:700}
-.tab.fab b{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-top:-22px;background:var(--green);border-radius:22px;font-size:24px;color:#04120A}
 </style></head>
 <body><div class="phone"><div class="screen">
 <div class="statusbar"><span>9:41</span><span>📶 📡 🔋</span></div>
 <div class="appbar"><div class="brandrow"><span class="brand">CIBI</span><span class="pill">● SIN CONEXIÓN</span></div></div>
 <div class="scroll">
-<div><h1>Red instalada</h1><p class="sub">Agregados locales · 4 sedes · 100% offline (mapa con tiles solo online)</p></div>
-<div class="card"><h3>🌎 Dónde estamos</h3><p class="crumb" style="margin:0">Américas › <b>Brasil</b> › São Paulo › <a>Hospital Alpha (3 MR)</a> · <a>Campinas</a><br><span class="small">Lista offline siempre; mapa es mejora.</span></p></div>
-<div class="kpi">
-<div class="cell"><b>9</b><span>MR total</span></div>
-<div class="cell"><b>6</b><span>CT total</span></div>
-<div class="cell"><b style="color:var(--amber)">4</b><span>equipos &gt;7 años</span></div>
-<div class="cell"><b>3</b><span>registros incompletos</span></div>
-</div>
-<div class="opp">💡 <b>Oportunidad de renovación</b><br>2 MR de 8–10 años en Hospital Alpha → contactar ingeniería clínica. <a>Ver ficha →</a><br><span class="small">Trust-delta semanal: 3 campos Reported → Confirmed ✓</span></div>
-<div class="card"><h3>🔎 Pregunta a tu red (RAG local)</h3><input class="query" value="clientes en Brasil con MR de más de 7 años">
-<div class="result"><span>🏥</span><span><b>Hospital Alpha</b> — 2 MR 8–10 años<br><span class="small">RAG local + MedPsy · citado por sede</span></span></div>
-<div class="result"><span>🏥</span><span><b>Hospital Beta</b> — 1 MR 9 años<br><span class="small">RAG local + MedPsy · citado por sede</span></span></div></div>
+<div><h1>Hoy en São Paulo</h1><p class="sub">A dónde ir · qué decir · 100% offline</p></div>
+<div class="sect">F08 · Próxima acción</div>
+<div class="hero">💡 <b>Mañana: Hospital Alpha</b><br>2 MR de 8–10 años → ofrecer renovación a ingeniería clínica.<br><span class="meta">Hablaste con Ing. Ruiz hace 42 días · informe v1 · datos sintéticos</span>
+<div class="btnrow"><button class="btn primary">Ver informe</button><button class="btn ghost">📅 Agendar</button></div><div class="small" style="margin-top:8px">Agendar crea visita funcional offline → aparece en Inicio · <a style="color:var(--green)">Qué decir ›</a></div></div>
+<div class="sect">F07 · Mis sedes</div>
+<div class="card"><h3>🔍 Buscar sede (lista offline)</h3>
+<input class="search" value="São Paulo">
+<div class="chips" style="margin-top:10px"><span class="chip on">Todas</span><span class="chip on">Brasil</span><span class="chip">>7 años</span><span class="chip">Incompletas</span></div>
+<div style="margin-top:6px">
+<div class="row"><span>🏥 <b>Hospital Alpha</b><span class="badge stale">hace 42d</span><span class="badge ok">📅 mañana</span><small>2 MR 8–10 años · contactar ingeniería · 3 MR / 2 CT / 5 US</small></span><span class="go">›</span></div>
+<div class="row"><span>🏥 <b>Hospital Beta</b><span class="badge stale">incompleto</span><small>Te falta edad de 1 CT para cerrar el informe</small></span><span class="go">›</span></div>
+<div class="row"><span>🏥 <b>Campinas Centro</b><span class="badge ok">fresco</span><small>Sin alertas · visitado hace 6 días</small></span><span class="go">›</span></div>
+</div></div>
+<div class="sect">F08 · Pregunta a tu red</div>
+<div class="card"><h3>🔎 Pregunta útil (en este teléfono)</h3>
+<div class="qchips"><span class="chip on">MR >7 años en Brasil</span><span class="chip">Sin visitar 60 días</span><span class="chip">Incompletos</span></div>
+<div class="result"><span>🏥</span><span><b>Hospital Alpha</b> — 2 MR 8–10 años · informe v1 ›<br><span class="small">Generado en este teléfono · sin conexión</span></span></div>
+<div class="result"><span>🏥</span><span><b>Hospital Beta</b> — 1 MR 9 años · informe v2 ›<br><span class="small">Generado en este teléfono · sin conexión</span></span></div></div>
+<p class="maplink"><a>Ver mapa ›</a> (tiles solo online — la lista carga la demo)</p>
 <p class="fine">Extracción de inventario de equipamiento.<br>No es diagnóstico clínico.</p>
 </div>
-<div class="tabbar"><div class="tab"><span>🏠</span>Inicio</div><div class="tab fab"><b>+</b>Nueva</div><div class="tab active"><span>🗺️</span>Red</div><div class="tab"><span>⚙️</span>Ajustes</div></div>
+<div class="tabbar"><div class="tab"><span>🏠</span>Inicio</div><div class="tab"><span>📊</span>Panel</div><div class="tab active"><span>🗺️</span>Red</div><div class="tab"><span>⚙️</span>Ajustes</div></div>
 </div></div></body></html>

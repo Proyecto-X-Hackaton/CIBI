@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>00 Inicio / Visitas — mockup</title>
+<title>00 Inicio / Inspecciones — mockup</title>
 <style>
-:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E;--blue:#3B82F6;--amber:#F59E0B}
+:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E;--blue:#3B82F6;--amber:#F59E0B;--purple:#A78BFA}
 *{box-sizing:border-box}
 body{background:#0A0A0E;display:flex;justify-content:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px;color:var(--text)}
 .phone{width:390px;height:844px;background:var(--bg);border:1px solid #33333F;border-radius:44px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.6);flex-shrink:0}
@@ -26,39 +26,43 @@ h1{font-size:22px;margin:0}.sub{font-size:13px;color:var(--muted);margin:4px 0 0
 .chip.green{background:rgba(34,197,94,.14);color:var(--green);border-color:rgba(34,197,94,.45)}
 .chip.amber{background:rgba(245,158,11,.12);color:var(--amber);border-color:rgba(245,158,11,.45)}
 .chip.blue{background:rgba(59,130,246,.14);color:#93BBFD;border-color:rgba(59,130,246,.5)}
+.chip.purple{background:rgba(167,139,250,.13);color:var(--purple);border-color:rgba(167,139,250,.5)}
 .equip{font-size:13px;margin-top:8px;color:#D6D6DE}
-.actions{display:flex;gap:14px;margin-top:10px;font-size:13px}
+.rep{font-size:12px;margin-top:8px;color:var(--muted)}
+.actions{display:flex;gap:14px;margin-top:10px;font-size:13px;flex-wrap:wrap}
 .actions a{color:var(--green);text-decoration:none;font-weight:600}
 .actions a.sec{color:#93BBFD}
-.newbtn{background:var(--green);color:#04120A;border:0;border-radius:14px;min-height:54px;font-weight:800;font-size:15px;width:100%}
+.newbtn{background:var(--green);color:#04120A;border:0;border-radius:14px;min-height:54px;font-weight:800;font-size:15px;width:100%;position:sticky;top:0;z-index:5}
 .fine{font-size:11px;color:#8A8A95;line-height:1.5;text-align:center}
-.tabbar{display:flex;border-top:1px solid var(--border);background:#101016;padding:10px 4px 20px}
-.tab{flex:1;text-align:center;font-size:10px;color:#6E6E78}.tab span{display:block;font-size:19px;margin-bottom:2px}
+.tabbar{display:flex;border-top:1px solid var(--border);background:#101016;padding:8px 4px 18px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#6E6E78;gap:3px}
+.tab span{font-size:19px;line-height:1}
 .tab.active{color:var(--green);font-weight:700}
-.tab.fab{color:#04120A}.tab.fab b{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-top:-22px;background:var(--green);border-radius:22px;font-size:24px;color:#04120A}
 </style></head>
 <body><div class="phone"><div class="screen">
 <div class="statusbar"><span>9:41</span><span>📶 📡 🔋</span></div>
 <div class="appbar"><div class="brandrow"><span class="brand">CIBI</span><span class="pill">● SIN CONEXIÓN · 2 pendientes</span></div></div>
 <div class="scroll">
-<div><h1>Visitas</h1><p class="sub">Historial local · toca una sede para ver su ficha</p></div>
+<div><h1>Inspecciones</h1><p class="sub">Inspección = captura editable · Informe = reporte generado (siempre re-generable)</p></div>
+<button class="newbtn">+ Nueva inspección con IA</button>
+<div class="card" style="border-color:rgba(34,197,94,.5)"><div class="row1"><div><div class="fac">📅 Esta semana · 1 agendada</div><div class="city">Hospital Alpha · mañana · 2 MR 8–10 años → renovación</div></div><span class="chip green">📅 mañana</span></div>
+<div class="actions"><a>▶ Iniciar inspección</a><a class="sec">Posponer</a><a class="sec">Cancelar</a></div></div>
 <input class="search" placeholder="Buscar hospital, ciudad…  ej. Alpha">
-<div class="filters"><span class="fchip on">Todas</span><span class="fchip">Borrador</span><span class="fchip">Pendiente sync</span><span class="fchip">Re-verificar</span></div>
-<div class="card draft"><div class="row1"><div><div class="fac">Hospital Alpha</div><div class="city">São Paulo, Brasil · hoy 09:12 · A. Ruiz</div></div><span class="chip blue">Borrador</span></div>
+<div class="filters"><span class="fchip on">Todas</span><span class="fchip">Borrador</span><span class="fchip">Sin informe</span><span class="fchip">Re-verificar</span></div>
+<div class="card draft"><div class="row1"><div><div class="fac">Hospital Alpha</div><div class="city">Inspección · São Paulo, Brasil · hoy 09:12 · A. Ruiz</div></div><span class="chip blue">Borrador</span></div>
 <div class="equip">3 MR / 2 CT / 4 US · <span class="chip">Reported</span></div>
-<div class="actions"><a>▶ Continuar chat</a><a class="sec">Descartar</a></div></div>
-<div class="card"><div class="row1"><div><div class="fac">Hospital Alpha</div><div class="city">São Paulo · 07-sep · verificado</div></div><span class="chip green">SYNCED</span></div>
+<div class="rep">📄 Informe: <b style="color:#fff">sin generar</b></div>
+<div class="actions"><a>▶ Continuar chat</a><a class="sec">Editar</a><a class="sec">Descartar</a></div></div>
+<div class="card"><div class="row1"><div><div class="fac">Hospital Alpha</div><div class="city">Inspección · 07-sep · verificado</div></div><span class="chip green">SYNCED</span></div>
 <div class="equip">3 MR / 2 CT / 5 US · confianza Media</div>
 <div class="badges"><span class="chip amber">⚠ MR-2 &gt;180d → re-verificar</span></div>
-<div class="actions"><a>Abrir ficha →</a><a class="sec">+ Nueva observación</a><a class="sec">⟳ Re-generar</a></div></div>
-<div class="card"><div class="row1"><div><div class="fac">Hospital Beta</div><div class="city">Campinas · 05-sep · pendiente</div></div><span class="chip amber">PENDING</span></div>
+<div class="rep">📄 Informe v1 · <span class="chip green">🟢 CIBI</span> · hace 2d <a style="color:var(--green)">Ver informe →</a></div>
+<div class="actions"><a class="sec">Editar inspección</a><a class="sec">+ Añadir evidencia</a><a>⟳ Re-generar informe</a></div></div>
+<div class="card"><div class="row1"><div><div class="fac">Hospital Beta</div><div class="city">Inspección · Campinas · 05-sep</div></div><span class="chip amber">PENDING</span></div>
 <div class="equip">1 MR 9 años / 2 US · <span class="chip">Estimated</span></div>
-<div class="actions"><a>Abrir ficha →</a><a class="sec">Editar</a><a class="sec">⟳ Re-generar</a></div></div>
-<div class="card"><div class="row1"><div><div class="fac">Clínica Norte</div><div class="city">Bogotá, Colombia · 02-sep</div></div><span class="chip green">SYNCED</span></div>
-<div class="equip">2 CT / 3 US · confianza Alta</div>
-<div class="actions"><a>Abrir ficha →</a><a class="sec">Historial</a></div></div>
-<button class="newbtn">+ Nueva visita con IA</button>
+<div class="rep">📄 Informe v2 · <span class="chip purple">🔵 CIBI Pro</span> <a style="color:var(--green)">Ver informe →</a></div>
+<div class="actions"><a class="sec">Editar inspección</a><a>⟳ Re-generar con…</a></div></div>
 <p class="fine">Extracción de inventario de equipamiento.<br>No es diagnóstico clínico.</p>
 </div>
-<div class="tabbar"><div class="tab active"><span>🏠</span>Inicio</div><div class="tab fab"><b>+</b>Nueva</div><div class="tab"><span>🗺️</span>Red</div><div class="tab"><span>⚙️</span>Ajustes</div></div>
+<div class="tabbar"><div class="tab active"><span>🏠</span>Inicio</div><div class="tab"><span>📊</span>Panel</div><div class="tab"><span>🗺️</span>Red</div><div class="tab"><span>⚙️</span>Ajustes</div></div>
 </div></div></body></html>

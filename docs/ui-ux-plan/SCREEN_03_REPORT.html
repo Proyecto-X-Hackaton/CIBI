@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>03 Ficha del hospital — mockup</title>
+<title>03 Informe — mockup</title>
 <style>
-:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E;--blue:#3B82F6;--amber:#F59E0B}
+:root{--bg:#0B0B0F;--surface:#16161E;--border:#26262F;--text:#F2F2F5;--muted:#A7A7B3;--green:#22C55E;--blue:#3B82F6;--amber:#F59E0B;--purple:#A78BFA}
 *{box-sizing:border-box}
 body{background:#0A0A0E;display:flex;justify-content:center;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;margin:0;padding:24px;color:var(--text)}
 .phone{width:390px;height:844px;background:var(--bg);border:1px solid #33333F;border-radius:44px;padding:10px;box-shadow:0 20px 60px rgba(0,0,0,.6);flex-shrink:0}
@@ -17,6 +17,10 @@ h1{font-size:22px;margin:0}.sub{font-size:13px;color:var(--muted);margin:4px 0 0
 .card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:16px}
 .card h3{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--muted);margin:0 0 12px}
 .value{font-size:12.5px;color:#C9C9D4;line-height:1.55;background:rgba(34,197,94,.07);border:1px solid rgba(34,197,94,.35);border-radius:12px;padding:10px 12px}
+.tierbar{display:flex;gap:6px}
+.tier{flex:1;font-size:11px;font-weight:700;border-radius:12px;padding:8px 4px;text-align:center;border:1px solid #34343F;background:#1A1A24;color:#D6D6DE}
+.tier.on{border-color:var(--green);background:rgba(34,197,94,.12);color:var(--green)}
+.tier.lock{opacity:.45}
 table{width:100%;font-size:13px;border-collapse:collapse}
 th{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);font-weight:600}
 td,th{border-bottom:1px solid var(--border);padding:10px 4px;text-align:left;vertical-align:middle}
@@ -27,35 +31,43 @@ tr:last-child td{border-bottom:0}
 .hist{display:flex;flex-direction:column;gap:12px;font-size:13px;line-height:1.55}
 .hist .item{display:flex;gap:10px}.hist .ico{flex-shrink:0}
 .small{font-size:12px;color:var(--muted);line-height:1.5}
-.cta2{background:var(--blue);border:0;color:#fff;border-radius:14px;min-height:52px;font-weight:700;font-size:15px;width:100%}
-.ghost{background:transparent;border:1px solid #3A3A45;color:#fff;border-radius:14px;min-height:48px;font-size:14px;width:100%}
+.cta2{background:var(--green);border:0;color:#04120A;border-radius:14px;min-height:52px;font-weight:800;font-size:15px;width:100%}
+.btn-secondary{background:var(--blue);border:0;color:#fff;border-radius:14px;min-height:52px;font-weight:800;font-size:15px;width:100%}
+.ghost{background:transparent;border:1px solid #3A3A45;color:#fff;border-radius:14px;min-height:52px;font-weight:600;font-size:15px;width:100%}
+.actions{display:flex;flex-direction:column;gap:10px}
 .chip{font-size:11px;background:#23232D;border:1px solid #34343F;border-radius:12px;padding:4px 10px;color:#D6D6DE}
 .fine{font-size:11px;color:#8A8A95;line-height:1.5;text-align:center}
-.tabbar{display:flex;border-top:1px solid var(--border);background:#101016;padding:10px 4px 20px}
-.tab{flex:1;text-align:center;font-size:10px;color:#6E6E78}.tab span{display:block;font-size:19px;margin-bottom:2px}
+.tabbar{display:flex;border-top:1px solid var(--border);background:#101016;padding:8px 4px 18px}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:10px;color:#6E6E78;gap:3px}
+.tab span{font-size:19px;line-height:1}
 .tab.active{color:var(--green);font-weight:700}
-.tab.fab b{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-top:-22px;background:var(--green);border-radius:22px;font-size:24px;color:#04120A}
 </style></head>
 <body><div class="phone"><div class="screen">
 <div class="statusbar"><span>9:41</span><span>📶 📡 🔋</span></div>
 <div class="appbar"><div class="brandrow"><span class="brand">CIBI</span><span class="pill">● SIN CONEXIÓN</span></div></div>
-<div class="backrow">‹ Inicio · São Paulo / <b style="color:#fff">Hospital Alpha</b> · registro sintético</div>
+<div class="backrow">‹ Inspecciones · São Paulo / <b style="color:#fff">Hospital Alpha</b> · sintético</div>
 <div class="scroll">
-<div><h1>Hospital Alpha</h1><p class="sub">Ficha persistente — se actualiza con cada visita, funciona offline</p>
+<div><h1>Informe · Hospital Alpha</h1><p class="sub">Reporte v1 · 🟢 CIBI · de inspección 07-sep (editable siempre)</p>
 <p style="margin:10px 0 0;display:flex;gap:8px;flex-wrap:wrap"><span class="fresh">✓ Verificado hace 2 días</span><span class="stale">⚠ MR-2 &gt;180 días → re-verificar</span></p></div>
-<div class="value">Para qué sirve: ver <b>qué hay instalado, qué tan confiable es cada dato y qué cambió</b>. No es un paso del wizard — es el destino que acumula confianza.</div>
-<div class="card"><h3>Parque instalado</h3><table>
+<div class="value">Informe = foto confiable del parque a una fecha. La <b>inspección origen sigue editable</b>; re-genera el informe cuando quieras, con el asistente que quieras.</div>
+<div class="card"><h3>Generar con</h3><div class="tierbar"><div class="tier on">🟢 CIBI<br><span style="font-weight:400">rápido · listo</span></div><div class="tier lock">🔵 CIBI Pro · 🔒<br><span style="font-weight:400">mejor calidad</span></div><div class="tier lock">🟣 CIBI Super · 🔒<br><span style="font-weight:400">máximo razonamiento</span></div></div>
+<p class="small" style="margin:10px 0 0">Preselección 🟢 CIBI · <a style="color:inherit">ⓘ detalles</a></p></div>
+<div class="card"><h3>Parque instalado (informe v1)</h3><table>
 <tr><th>Tipo</th><th>Cant.</th><th>Edad aprox.</th><th>Conf.</th></tr>
 <tr><td><b>MR</b></td><td>3</td><td>4–10 años</td><td class="high">Alta</td></tr>
 <tr><td><b>CT</b></td><td>2</td><td>desconocida</td><td class="med">Media</td></tr>
 <tr><td><b>Ultrasonido</b></td><td>5</td><td>mixta</td><td class="med">Media</td></tr></table></div>
-<div class="card"><h3>Historial de observaciones (procedencia)</h3><div class="hist">
-<div class="item"><span class="ico">💬</span><span>A. Ruiz · 09-sep · chat ES → EN<br><span class="small">3 MR / 2 CT / 4 US · <span class="chip">Reported</span> · MedPsy-1.7B</span></span></div>
-<div class="item"><span class="ico">📷</span><span>Placa MR-2 · OCR 0.91 → Confirmed<br><span class="small">VisionPsy-Flash-Q8 + OCR_LATIN</span></span></div>
+<div class="card"><h3>Historial informe + inspección</h3><div class="hist">
+<div class="item"><span class="ico">📄</span><span>Informe v1 · 🟢 CIBI · 07-sep<br><span class="small">Rápido · en tu teléfono</span></span></div>
+<div class="item"><span class="ico">💬</span><span>Inspección 07-sep · A. Ruiz · chat ES → EN<br><span class="small">3 MR / 2 CT / 4 US · <span class="chip">Reported</span></span></span></div>
+<div class="item"><span class="ico">📷</span><span>Placa MR-2 · texto 0.91 → Confirmed</span></div>
 </div></div>
-<button class="cta2">+ Nueva observación en esta sede</button>
-<button class="ghost">⟳ Re-generar con equipo local / Editar</button>
+<div class="actions">
+<button class="cta2">⟳ Re-generar informe</button>
+<button class="btn-secondary">📄 Exportar PDF · compartir</button>
+<button class="ghost">Editar inspección · añadir evidencia</button>
+</div>
 <p class="fine">Extracción de inventario de equipamiento.<br>No es diagnóstico clínico.</p>
 </div>
-<div class="tabbar"><div class="tab active"><span>🏠</span>Inicio</div><div class="tab fab"><b>+</b>Nueva</div><div class="tab"><span>🗺️</span>Red</div><div class="tab"><span>⚙️</span>Ajustes</div></div>
+<div class="tabbar"><div class="tab active"><span>🏠</span>Inicio</div><div class="tab"><span>📊</span>Panel</div><div class="tab"><span>🗺️</span>Red</div><div class="tab"><span>⚙️</span>Ajustes</div></div>
 </div></div></body></html>
