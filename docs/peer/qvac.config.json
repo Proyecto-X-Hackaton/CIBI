@@ -1,0 +1,78 @@
+{
+  "loggerLevel": "info",
+  "loggerConsoleOutput": true,
+  "cacheDirectory": "/home/muffin/.qvac/models",
+  "serve": {
+    "models": {
+      "healthcare-4b-medical-q8-0": {
+        "model": "HEALTHCARE_4B_MEDICAL_Q8_0",
+        "default": true,
+        "preload": false,
+        "config": {
+          "ctx_size": 8192
+        }
+      },
+      "qwen3-5-9b-multimodal-q6-k": {
+        "model": "QWEN3_5_9B_MULTIMODAL_Q6_K",
+        "default": false,
+        "preload": false,
+        "config": {
+          "ctx_size": 8192
+        }
+      },
+      "medpsy-17b": {
+        "model": "HEALTHCARE_1_7B_MEDICAL_Q4_K_M",
+        "default": false,
+        "preload": false,
+        "config": {
+          "ctx_size": 4096
+        }
+      },
+      "translate-es": {
+        "model": "BERGAMOT_ES_EN",
+        "default": true,
+        "preload": false,
+        "config": {
+          "engine": "Bergamot",
+          "from": "es",
+          "to": "en"
+        }
+      },
+      "translate-pt": {
+        "model": "BERGAMOT_PT_EN",
+        "default": false,
+        "preload": false,
+        "config": {
+          "engine": "Bergamot",
+          "from": "pt",
+          "to": "en"
+        }
+      },
+      "vision-flash": {
+        "model": "VISIONPSY_NANO_460M_MULTIMODAL_Q8_0",
+        "default": false,
+        "preload": false,
+        "config": {
+          "ctx_size": 1024,
+          "projectionModelSrc": "registry://hf/qvac/VisionPsy-Nano-460M-Flash-GGUFs/resolve/a24fb9cdd1119406b15ff60b06a51f8438a931c1/mmproj-visionpsy-nano-460m-flash-q8.gguf",
+          "image_no_upscale": "on"
+        }
+      },
+      "ocr-latin": {
+        "model": "OCR_LATIN",
+        "default": true,
+        "preload": false
+      },
+      "parakeet": {
+        "model": "PARAKEET_TDT_0_6B_V3_Q8_0",
+        "default": true,
+        "preload": false
+      },
+      "embed": {
+        "model": "GTE_LARGE_FP16",
+        "default": true,
+        "preload": false
+      }
+    }
+  }
+}
