@@ -1,32 +1,21 @@
-"""
-URL configuration for config project.
+"""URL configuration for config project.
 
-The `urlpatterns` list routes URLs to views. For more information please see:
-    https://docs.djangoproject.com/en/6.1/topics/http/urls/
-Examples:
-Function views
-    1. Add an import:  from my_app import views
-    2. Add a URL to urlpatterns:  path('', views.home, name='home')
-Class-based views
-    1. Add an import:  from other_app.views import Home
-    2. Add a URL to urlpatterns:  path('', Home.as_view(), name='home')
-Including another URLconf
-    1. Import the include() function: from django.urls import include, path
-    2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
+CRUD/sync API only — zero inference anywhere on this server.
+The phone (Expo + @qvac/sdk) is the only place models run.
 """
+
 from django.contrib import admin
 from django.urls import path
-from rest_framework.decorators import api_view
-from rest_framework.response import Response
 
-
-@api_view(['GET'])
-def health(request):
-    # CRUD/sync server only — zero inference, never loads a model.
-    return Response({'status': 'ok', 'synthetic': True})
-
+from api import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/health/', health),
+    path('api/health/', views.health),
+    path('api/inspections/', views.inspections),
+    path('api/planned-visits/', views.planned_visits),
+    path('api/observations/', views.observations),
+    path('api/sync/push/', views.sync_push),
+    path('api/sites/', views.sites),
+    path('api/dashboard/summary/', views.dashboard_summary),
 ]
