@@ -1,7 +1,7 @@
 // HomeScreen — SCREEN_00_HOME: inspections + planned week + search/filter.
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, Pressable } from 'react-native';
 import { Disclaimer } from '../components/atoms';
 import { useTheme } from '../../theme/ThemeContext';
 import { useThemedStyles } from '../../theme/useThemedStyles';
@@ -10,7 +10,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { useApp } from '../state/AppState';
 import { useStrings } from '../i18n/useStrings';
-import { listInspections, createInspection, listPlannedVisits, setPlannedStatus, getReportVersions, getLatestObservation, type Inspection } from '../db/database';
+import { listInspections, createInspection, listPlannedVisits, setPlannedStatus, getReportVersions, getLatestObservation, deleteInspection, type Inspection } from '../db/database';
 
 export default function HomeScreen() {
   const { setWizard, refreshPendings } = useApp();
@@ -59,6 +59,20 @@ export default function HomeScreen() {
     setWizard({ name: 'chat', inspectionId: ins.client_uuid });
   };
 
+  // task-06: visible trash (44px target) + long-press on the card as bonus.
+  // Local-first total delete; sync-safe via the inspection_delete tombstone.
+  const confirmDelete = (i: Inspection) => {
+    Alert.alert(
+      t.deleteTitle,
+      t.deleteBody.replace('{name}', i.customer ?? 'Sin sede (borrador)'),
+      [
+        { text: t.cancel, style: 'cancel' },
+        { text: t.deleteConfirm, style: 'destructive', onPress: () => { deleteInspection(i.client_uuid).catch(() => {}).finally(reload); } },
+      ],
+      { cancelable: true },
+    );
+  };
+
   const shown = items.filter((i) => {
     if (q && !`${i.customer ?? ''} ${i.city ?? ''}`.toLowerCase().includes(q.toLowerCase())) return false;
     if (filter === 'Borrador') return i.status === 'BORRADOR';
@@ -93,19 +107,24 @@ export default function HomeScreen() {
         ))}
       </View>
       {shown.map((i) => (
-        <View key={i.client_uuid} style={s.card}>
+        <Pressable key={i.client_uuid} style={s.card} onLongPress={() => confirmDelete(i)}>
           <View style={s.row1}>
             <View style={{ flex: 1 }}>
               <View style={s.iconRow}><Icon name="hospital" size={15} color={th.text} /><Text style={s.fac}>{i.customer ?? 'Sin sede (borrador)'}</Text></View>
               <Text style={s.city}>Inspección · {i.city ?? '?'} · {new Date(i.observed_at).toLocaleDateString()} · {i.author}</Text>
             </View>
-            <Text style={s.status}>{i.status}</Text>
+            <View style={s.row1Right}>
+              <Text style={s.status}>{i.status}</Text>
+              <TouchableOpacity style={s.trash} onPress={() => confirmDelete(i)} accessibilityRole="button" accessibilityLabel={t.deleteTitle} hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}>
+                <Icon name="trash" size={18} color={th.red} />
+              </TouchableOpacity>
+            </View>
           </View>
           <View style={s.row}>
             <TouchableOpacity onPress={() => setWizard({ name: 'chat', inspectionId: i.client_uuid })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Text style={s.link}>{t.continueChat}</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => setWizard({ name: 'report', inspectionId: i.client_uuid })} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Text style={s.linkSec}>{t.viewReport} →</Text></TouchableOpacity>
           </View>
-        </View>
+        </Pressable>
       ))}
       {shown.length === 0 && <Text style={s.sub}>{t.emptyInspections}</Text>}
       <Disclaimer />
@@ -124,7 +143,9 @@ const makeStyles = (t: ThemeTokens) => StyleSheet.create({
   city: { color: t.muted, fontSize: 12, marginTop: 2 },
   iconRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   row1: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  row1Right: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   status: { color: t.blue, fontSize: 12, fontWeight: '700' },
+  trash: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', gap: 14, marginTop: 10, flexWrap: 'wrap' },
   link: { color: t.green, fontWeight: '600' },
   linkSec: { color: t.blue },

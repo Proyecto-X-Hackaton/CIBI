@@ -9,6 +9,8 @@ export type ThemeTokens = {
   blue: string;
   amber: string;
   purple: string;
+  /** Destructive actions only (delete inspection confirm affordances). */
+  red: string;
   /** Text/icon on solid green accent fills (CTA buttons, send). */
   onAccent: string;
   statusBar: 'light' | 'dark';
@@ -24,6 +26,7 @@ export const DarkTheme: ThemeTokens = {
   blue: '#3B82F6',
   amber: '#F59E0B',
   purple: '#A78BFA',
+  red: '#EF4444',
   onAccent: '#04120A',
   statusBar: 'light',
 };
@@ -38,6 +41,7 @@ export const LightTheme: ThemeTokens = {
   blue: '#1D4ED8',
   amber: '#B45309',
   purple: '#7C3AED',
+  red: '#B91C1C',
   onAccent: '#FFFFFF',
   statusBar: 'dark',
 };

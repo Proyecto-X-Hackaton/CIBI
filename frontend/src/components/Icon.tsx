@@ -6,7 +6,7 @@ import {
   Home, LayoutDashboard, Map as MapIcon, Settings as SettingsIcon,
   Camera, Mic, Send, X, ChevronLeft, ChevronRight, Search,
   Calendar, FileText, RefreshCw, Info, WifiOff, TriangleAlert,
-  Lightbulb, Building2, CircleStop, Check, ClipboardCheck,
+  Lightbulb, Building2, CircleStop, Check, ClipboardCheck, Trash,
 } from 'lucide-react-native';
 
 const MAP = {
@@ -32,6 +32,7 @@ const MAP = {
   stop: CircleStop,
   check: Check,
   review: ClipboardCheck,
+  trash: Trash,
 } as const;
 
 import { useTheme } from '../../theme/ThemeContext';

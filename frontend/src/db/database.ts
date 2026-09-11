@@ -139,6 +139,43 @@ export async function listInspections(): Promise<Inspection[]> {
   return (await d.getAllAsync('SELECT client_uuid, customer, city, country, author, observed_at, status, planned_uuid, updated_at FROM inspections ORDER BY updated_at DESC LIMIT 100')) as Inspection[];
 }
 
+// ---- delete (task-06) ----
+// Local-first and total: wipes every child row, PENDING outbox rows and the
+// inspection itself in one transaction, deletes its media files from disk,
+// then enqueues an `inspection_delete` tombstone so the backend sync (Task 07
+// /api/sync/push/) honors the delete instead of resurrecting the row later.
+// Pull is unimplemented — nothing can resurrect locally today; this tombstone
+// keeps that true once pull exists. Panel/Red recompute from SQLite, so
+// aggregates stay consistent automatically.
+export async function deleteInspection(clientUuid: string): Promise<void> {
+  const d = await getDb();
+  // Collect media refs before the rows that point at them are gone.
+  const refs = new Set<string>();
+  for (const r of (await d.getAllAsync('SELECT photo_ref FROM photo_evidence WHERE inspection_id=?', [clientUuid])) as any[]) {
+    if (r.photo_ref) refs.add(r.photo_ref);
+  }
+  for (const r of (await d.getAllAsync('SELECT photo_ref, audio_ref FROM messages WHERE inspection_id=?', [clientUuid])) as any[]) {
+    if (r.photo_ref) refs.add(r.photo_ref);
+    if (r.audio_ref) refs.add(r.audio_ref);
+  }
+  for (const r of (await d.getAllAsync('SELECT file_ref FROM audio_clips WHERE inspection_id=?', [clientUuid])) as any[]) {
+    if (r.file_ref) refs.add(r.file_ref);
+  }
+  await d.withTransactionAsync(async () => {
+    await d.runAsync('DELETE FROM messages WHERE inspection_id=?', [clientUuid]);
+    await d.runAsync('DELETE FROM photo_evidence WHERE inspection_id=?', [clientUuid]);
+    await d.runAsync('DELETE FROM audio_clips WHERE inspection_id=?', [clientUuid]);
+    await d.runAsync('DELETE FROM observations WHERE inspection_id=?', [clientUuid]);
+    await d.runAsync('DELETE FROM report_versions WHERE inspection_id=?', [clientUuid]);
+    // Drop pending pushes for this uuid first, then leave a tombstone in its place.
+    await d.runAsync("DELETE FROM outbox WHERE client_uuid=? AND status='PENDING'", [clientUuid]);
+    await d.runAsync('DELETE FROM inspections WHERE client_uuid=?', [clientUuid]);
+    await enqueueOutbox(clientUuid, 'inspection_delete', { client_uuid: clientUuid, deleted_at: nowIso() });
+  });
+  // Media cleanup is best-effort: a missing file must never fail the delete.
+  await Promise.all([...refs].map((f) => FileSystem.deleteAsync(f, { idempotent: true }).catch(() => {})));
+}
+
 // ---- messages (write-through chat history) ----
 export interface ChatMsg { role: 'user' | 'assistant'; text_original: string; lang: string | null; text_en: string | null; photo_ref?: string | null; }
 
