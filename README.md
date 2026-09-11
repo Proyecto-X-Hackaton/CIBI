@@ -8,7 +8,7 @@ Offline-first mobile app for hospital field visits: **one visit → trusted inst
 ## Demo video (≤5 min, Spanish)
 
 <!-- TODO(video): replace with the public link (no login) before submitting -->
-- **Link:** _PENDIENTE — insertar enlace público sin login antes de la entrega_
+- **Link:** https://drive.google.com/file/d/1EURfwoQLqTUinA6nNo8zdW1AhR5O_1Z3/view?usp=drive_link
 
 ## Pre-existing base (declared per hackathon T&C)
 
