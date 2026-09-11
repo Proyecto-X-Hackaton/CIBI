@@ -10,6 +10,10 @@ backend/*.pyc
 # Local debug scratch (adb UI dumps, scratch SQLite) — never commit
 .debug-tmp/
 
+# Demo build artifacts — release APK (~373MB) exceeds GitHub's 100MB
+# per-file limit; distribute via a GitHub Release attachment instead
+demo/
+
 # Expo/React Native (in frontend/)
 frontend/node_modules/
 frontend/.expo/
