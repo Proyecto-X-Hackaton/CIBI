@@ -62,7 +62,14 @@ export async function logSpan(span: PerfSpan): Promise<void> {
   } catch {
     // Logging must never break the judged flow.
   }
-  if (__DEV__) console.log('[perf]', span.phase, span.model, `${span.ttft_ms ?? '-'}ms`, `${span.throughput_tps ?? '-'}t/s`);
+  if (__DEV__) {
+    // Load spans carry load_ms (there is no TTFT for a load); other spans
+    // carry ttft_ms where available. This is what the smoke log reads.
+    const ms = span.phase === 'load' ? span.load_ms : span.ttft_ms ?? span.load_ms;
+    const rate = span.throughput_tps != null ? `${span.throughput_tps.toFixed(1)}t/s` : '-t/s';
+    const tok = span.tokens_out ? `${span.tokens_out}tok` : '';
+    console.log('[perf]', span.phase, span.model, `${ms != null ? `${Math.round(ms)}ms` : '-ms'}`, rate, tok);
+  }
 }
 
 export function recentSpans(n = 8): PerfSpan[] {

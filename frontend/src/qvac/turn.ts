@@ -1,7 +1,10 @@
 // turn.ts — one chat turn, ONE MedPsy residency.
 // Previously each message paid two full 1.28GB load→unload cycles
 // (structure, then dialogue). Now: acquire once → infer structure →
-// infer dialogue → unload. Roughly halves per-turn latency on CPU.
+// infer dialogue → unload. The model structure pass additionally only
+// runs when the message actually carries inventory content (greetings and
+// chit-chat skip it), and the reasoning channel is off so both passes
+// produce only the tokens the app uses.
 
 import { completion, HEALTHCARE_1_7B_MEDICAL_Q4_K_M } from '@qvac/sdk';
 import {
@@ -21,6 +24,7 @@ import {
   parseStructureText,
   EQUIPMENT_RESPONSE_FORMAT,
   structureFallback,
+  looksLikeInventory,
   type StructuredReport,
 } from './structure';
 import {
@@ -45,7 +49,8 @@ async function inferOnce(opts: {
     modelId: opts.modelId,
     history: opts.history as any,
     stream: true,
-    generationParams: { predict: opts.predict },
+    captureThinking: true,
+    generationParams: { predict: opts.predict, reasoning_budget: 0 },
   });
   const { text, stats } = await collectCompletion(run);
   const s = statsToSpan(stats);
@@ -213,10 +218,14 @@ async function answerLocalChatTurn(opts: ChatTurnInput): Promise<ChatTurnResult>
         acquireError = String(e?.message ?? e ?? 'load-failed');
       }
 
-      // Pass 1 (hidden): structure.
+      // Pass 1 (hidden): structure — only when this message carries
+      // inventory content (photo evidence or equipment-ish words/numbers).
+      // Greetings/navigation skip it: one full inference pass saved per
+      // turn, and the visible dialogue reply is unaffected.
       let struct: StructuredReport | null = null;
       let structMethod = 'regex-fallback';
-      if (modelId) {
+      const wantsStructure = !!opts.photoSummary || looksLikeInventory(opts.textEn) || looksLikeInventory(opts.userText);
+      if (modelId && wantsStructure) {
         progress?.(null, 'structure');
         try {
           const structText = await inferOnce({

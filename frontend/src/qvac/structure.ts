@@ -10,6 +10,7 @@ import type { TierId } from './TIER_ROSTER';
 import { OFFLINE_ROUTE, offlineFallback, peerRoute, type RouteMeta } from './route';
 import { repairJson } from '../utils/jsonRepair';
 import { containsBannedClinicalClaim } from '../utils/safety';
+import { stripThinkingBlocks } from '../utils/thinking';
 
 export type Confidence = 'Confirmed' | 'Reported' | 'Estimated' | 'Unknown';
 export type Modality = 'MR' | 'CT' | 'US' | 'XR';
@@ -108,10 +109,35 @@ export function buildStructureHistory(opts: {
   return [{ role: 'user', content: `${SYSTEM_PROMPT}\n\n${userContent}` }];
 }
 
+/** Heuristic: does this message plausibly carry inventory content?
+ * Used by the chat turn to skip the hidden MedPsy structure pass on
+ * greetings/navigation (digit or equipment vocabulary → run the pass;
+ * anything else is cheap chit-chat). Permissive on purpose: a false
+ * positive only costs one inference, a false negative skips a pass that
+ * would have produced zero items anyway. */
+export function looksLikeInventory(text: string): boolean {
+  if (!text) return false;
+  const t = text.toLowerCase();
+  if (/\d/.test(t)) return true;
+  if (/\b(mr|mri|rm|ct|tac|xr|scanner|scan)\b/.test(t)) return true;
+  return [
+    // modalities + equipment vocabulary (ES/PT/EN)
+    'resonan', 'tomograf', 'ultras', 'ultrass', 'ecograf', 'rayos', 'x-ray', 'xray',
+    'tomógrafo', 'tomografo', 'escáner', 'escaner',
+    'equipo de', 'equipament', 'aparelho', 'aparelh', 'máquina', 'maquina',
+    'marca', 'fabricante', 'modelo', 'placa', 'serie',
+    'año', 'anos', 'años', 'edad', 'hospital', 'clínica', 'clinica',
+    // common imaging makers — a brand-only answer still carries inventory
+    'siemens', 'philips', 'toshiba', 'canon', 'hitachi', 'ge',
+    'samsung', 'carestream', 'fujifilm', 'agfa', 'mindray', 'shenzhen',
+  ].some((s) => t.includes(s));
+}
+
 /** Parse model output into a report. Throws on gate hit or bad JSON. */
 export function parseStructureText(text: string): StructuredReport {
-  if (containsBannedClinicalClaim(text)) throw new Error('clinical-claim-gate');
-  const report = coerceReport(repairJson(text));
+  const clean = stripThinkingBlocks(text);
+  if (containsBannedClinicalClaim(clean)) throw new Error('clinical-claim-gate');
+  const report = coerceReport(repairJson(clean));
   if (containsBannedClinicalClaim(JSON.stringify(report))) throw new Error('clinical-claim-gate');
   return report;
 }
@@ -177,6 +203,8 @@ async function runLocalStructure(opts: StructureInput): Promise<StructuredReport
       modelConfig: { ctx_size: 1024, gpu_layers: 0, load_mode: 'mmap' },
       ctx_size: 1024,
       predict: 256,
+      reasoningBudget: 0,
+      captureThinking: true,
       history: buildStructureHistory(opts),
       onProgress: opts.onProgress,
     });

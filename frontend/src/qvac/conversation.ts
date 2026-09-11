@@ -14,6 +14,7 @@ import { peerChat, PEER_MODELS } from './peerClient';
 import type { TierId } from './TIER_ROSTER';
 import { OFFLINE_ROUTE, offlineFallback, peerRoute, type RouteMeta } from './route';
 import { containsBannedClinicalClaim } from '../utils/safety';
+import { stripThinkingBlocks } from '../utils/thinking';
 import type { StructuredReport } from './structure';
 
 export interface DialogueTurn {
@@ -31,7 +32,8 @@ const DIALOGUE_SYSTEM =
   'Si hay foto analizada, comenta lo que se ve y pide confirmar o corregir. ' +
   'Si la traducción falló, dilo con naturalidad y sigue con el texto original. ' +
   'Nunca inventes fabricantes ni modelos: si no los sabes, pregunta. ' +
-  'Nunca muestres JSON, nombres de modelos, ni métricas internas.';
+  'Nunca muestres JSON, nombres de modelos, ni métricas internas. ' +
+  'Nunca escribas razonamiento interno ni etiquetas tipo  thinking: responde solo la respuesta final.';
 
 function factsLine(report: StructuredReport | null): string {
   if (!report || report.items.length === 0) return 'Inventario hasta ahora: vacío.';
@@ -76,7 +78,7 @@ export function buildDialogueHistory(opts: DialogueInput): Array<{ role: 'user';
 
 /** Validate + clean a dialogue output. Throws on empty/gate hit. */
 export function parseDialogueText(text: string): string {
-  const clean = text.trim();
+  const clean = stripThinkingBlocks(text);
   if (!clean) throw new Error('empty dialogue');
   if (containsBannedClinicalClaim(clean)) throw new Error('clinical-claim-gate');
   return clean;
@@ -135,6 +137,8 @@ export async function generateAssistantReply(opts: DialogueInput & {
       modelConfig: { ctx_size: 2048, gpu_layers: 0, load_mode: 'mmap' },
       ctx_size: 2048,
       predict: 220,
+      reasoningBudget: 0,
+      captureThinking: true,
       history: buildDialogueHistory(opts),
       onProgress: opts.onProgress,
     });

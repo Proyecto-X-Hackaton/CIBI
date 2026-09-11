@@ -61,6 +61,8 @@ export async function testChat(): Promise<{ ok: boolean; text: string; ms: numbe
       modelConfig: { ctx_size: 1024, gpu_layers: 0, load_mode: 'mmap' },
       ctx_size: 1024,
       predict: 16,
+      reasoningBudget: 0,
+      captureThinking: true,
       history: [{ role: 'user', content: 'Reply with exactly: OK. Nothing else.' }],
     });
     const clean = text.trim();

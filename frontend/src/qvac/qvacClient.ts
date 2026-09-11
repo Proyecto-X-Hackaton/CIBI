@@ -9,8 +9,9 @@
 //
 // Verified against @qvac/sdk 0.19.0 .d.ts:
 //  loadModel({modelSrc, modelType?, modelConfig?, onProgress?}) → modelId
-//  downloadAsset({assetSrc, onProgress?})
-//  completion({modelId, history, stream?}) → CompletionRun
+//    onProgress also streams download progress for uncached weights
+//  completion({modelId, history, stream?, captureThinking?, generationParams?})
+//    → CompletionRun
 //    canonical: events (AsyncIterable) + final (Promise); legacy: tokenStream/text/stats
 //  translate({modelId, text, from?, to?, modelType?, stream?})
 //    → {tokenStream, translations:Promise, text:Promise, stats, requestId}
@@ -24,7 +25,6 @@
 import {
   loadModel,
   unloadModel,
-  downloadAsset,
   completion,
   translate,
   ocr,
@@ -68,11 +68,70 @@ function timed<T>(fn: () => Promise<T>): Promise<{ value: T; ms: number }> {
 
 export async function safeUnload(modelId: string | null): Promise<void> {
   if (!modelId) return;
+  const warm = warmResidents.get(modelId);
+  if (warm) {
+    warmResidents.delete(modelId);
+    if (warm.timer) clearTimeout(warm.timer);
+  }
   try {
     await unloadModel({ modelId, clearStorage: false });
   } catch {
     // unload failure must not break the flow; next load replaces residency
   }
+}
+
+// ---- warm residency (still serialized; at most ONE big model resident) ----
+// The test device pays ~11s per loadModel on the 1.28GB MedPsy plus a cold
+// first generation (~1 tok/s vs ~8 warm), and it reloaded on EVERY message —
+// that made chat unusable. Chat-path models now opt into `keepWarm`: they
+// stay resident across turns and are evicted by (a) an idle timer that frees
+// RAM when the app goes quiet, or (b) any BIG model load with a different
+// identity (vision, embeddings…). Small helpers (Bergamot, ~32MB) never
+// occupy the big-model slot. Everything else keeps the strict
+// load→infer→unload lifecycle.
+interface WarmEntry {
+  key: string;
+  modelId: string;
+  big: boolean;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+const warmResidents = new Map<string, WarmEntry>(); // by modelId
+/** Idle window before a warm model is unloaded (frees RAM in background). */
+const WARM_IDLE_MS = 180_000;
+
+function warmKey(modelName: string, modelConfig?: Record<string, any>): string {
+  return `${modelName}|${JSON.stringify(modelConfig ?? {})}`;
+}
+
+function findWarm(key: string): WarmEntry | undefined {
+  for (const e of warmResidents.values()) if (e.key === key) return e;
+  return undefined;
+}
+
+async function evictBigWarm(exceptKey: string): Promise<void> {
+  const victims = [...warmResidents.values()].filter((e) => e.big && e.key !== exceptKey);
+  for (const v of victims) {
+    warmResidents.delete(v.modelId);
+    if (v.timer) clearTimeout(v.timer);
+    await safeUnload(v.modelId);
+  }
+}
+
+/** Release a warm model instead of unloading it: stays resident until the
+ * idle timer or a different big-model load evicts it. Non-warm ids fall
+ * back to an immediate safeUnload. */
+export async function releaseModel(modelId: string | null): Promise<void> {
+  if (!modelId) return;
+  const entry = warmResidents.get(modelId);
+  if (!entry) {
+    await safeUnload(modelId);
+    return;
+  }
+  if (entry.timer) clearTimeout(entry.timer);
+  entry.timer = setTimeout(() => {
+    warmResidents.delete(modelId);
+    void safeUnload(modelId);
+  }, WARM_IDLE_MS);
 }
 
 // ---- text extraction compatible with both SDK surfaces ----
@@ -131,7 +190,10 @@ export interface LoadedHandle {
   tier: TierId;
 }
 
-/** downloadAsset (progress UX) + loadModel, with perf 'load' span. */
+/** loadModel (download progress streamed via onProgress) + perf 'load' span.
+ * No separate downloadAsset pre-pass: loadModel fetches missing weights itself
+ * and reports percentage via onProgress, so a cached model proceeds straight
+ * to load instead of paying an extra round-trip every turn. */
 export async function acquireModel(opts: {
   tier: TierId;
   modelConst: any;
@@ -144,18 +206,28 @@ export async function acquireModel(opts: {
   image_no_upscale?: string | null;
   phase?: string;
   prompt_chars?: number;
+  /** Keep this model resident after release (chat-path hot models only). */
+  keepWarm?: boolean;
+  /** Big models evict other big warm residents before loading (default true; small helpers pass false). */
+  big?: boolean;
   onProgress?: ProgressCb;
 }): Promise<LoadedHandle> {
   const t0 = Date.now();
   const tier = effectiveTier(opts.tier);
+  const key = warmKey(opts.modelName, opts.modelConfig);
+  const big = opts.big !== false;
+  // Warm reuse: identical model+config already resident → zero load cost.
+  const existing = findWarm(key);
+  if (existing) {
+    if (existing.timer) clearTimeout(existing.timer);
+    existing.timer = null;
+    opts.onProgress?.(null, 'load');
+    return { modelId: existing.modelId, load_ms: 0, tier };
+  }
   try {
+    // One big resident at a time: evict other big warm models before loading.
+    if (big) await evictBigWarm(key);
     opts.onProgress?.(0, 'download');
-    await downloadAsset({
-      assetSrc: opts.modelConst,
-      onProgress: (p: any) => opts.onProgress?.(Math.round(p?.percentage ?? 0), 'download'),
-    }).catch(() => {
-      // downloadAsset is progress UX; loadModel re-fetches if needed
-    });
     opts.onProgress?.(null, 'load');
     const loadParams: any = { modelSrc: opts.modelConst };
     if (opts.modelType) loadParams.modelType = opts.modelType;
@@ -163,6 +235,7 @@ export async function acquireModel(opts: {
     loadParams.onProgress = (p: any) => opts.onProgress?.(Math.round(p?.percentage ?? 0), 'load');
     const modelId: string = await loadModel(loadParams);
     const load_ms = Date.now() - t0;
+    if (opts.keepWarm) warmResidents.set(modelId, { key, modelId, big, timer: null });
     await logSpan({
       ts: new Date().toISOString(),
       device: deviceLabel(),
@@ -220,7 +293,9 @@ export function statsToSpan(stats: any): { tokens_in: number; tokens_out: number
   };
 }
 
-/** Run a text completion with automatic acquire → infer → unload. Serialized. */
+/** Run a text completion with automatic acquire → infer → unload. Serialized.
+ * Reasoning is OFF by default (reasoning_budget 0) and  thinking blocks are
+ * captured apart from content, so callers receive the answer only. */
 export async function runCompletion(opts: {
   tier: TierId;
   modelConst: any;
@@ -233,6 +308,12 @@ export async function runCompletion(opts: {
   history: Array<{ role: 'user' | 'assistant'; content: string; attachments?: Array<{ path: string }> }>;
   /** Max tokens to generate. Caps runaway outputs on slow phones. */
   predict?: number;
+  /** 0 = reasoning channel off (default), -1 = unrestricted, N = cap. */
+  reasoningBudget?: number;
+  /** Split  thinking blocks out of content deltas (default true). */
+  captureThinking?: boolean;
+  /** Keep the model resident after this call (chat-path hot models only). */
+  keepWarm?: boolean;
   onProgress?: ProgressCb;
 }): Promise<{ text: string; load_ms: number }> {
   return serialized(async () => {
@@ -244,11 +325,15 @@ export async function runCompletion(opts: {
       opts.onProgress?.(null, 'infer');
       const tier = h.tier;
       const t0 = Date.now();
+      const generationParams: Record<string, number> = {};
+      if (opts.predict != null) generationParams.predict = opts.predict;
+      if (opts.reasoningBudget != null) generationParams.reasoning_budget = opts.reasoningBudget;
       const run: any = completion({
         modelId,
         history: opts.history as any,
         stream: true,
-        ...(opts.predict != null ? { generationParams: { predict: opts.predict } } : {}),
+        captureThinking: opts.captureThinking ?? true,
+        ...(Object.keys(generationParams).length > 0 ? { generationParams } : {}),
       });
       const ttftTimer = Date.now();
       void ttftTimer;
@@ -277,7 +362,8 @@ export async function runCompletion(opts: {
       void t0;
       return { text, load_ms: h.load_ms };
     } finally {
-      await safeUnload(modelId);
+      if (opts.keepWarm) await releaseModel(modelId);
+      else await safeUnload(modelId);
       opts.onProgress?.(null, 'done');
     }
   });
@@ -307,6 +393,8 @@ export async function runTranslate(opts: {
         modelType: 'nmtcpp-translation',
         modelConfig: { engine: 'Bergamot', from: opts.from, to: opts.to },
         prompt_chars,
+        keepWarm: true, // ~32MB helper: stays resident across chat turns
+        big: false,
         onProgress: opts.onProgress,
       });
       modelId = h.modelId;
