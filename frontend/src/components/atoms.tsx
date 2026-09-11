@@ -15,19 +15,28 @@ export const C = {
 };
 
 export function OfflineBadge({ online, pendings }: { online: boolean; pendings: number }) {
+  const { uiLang } = useApp();
   if (online && pendings === 0) return null;
+  const off = uiLang === 'en' ? 'OFFLINE' : 'SIN CONEXIÓN';
+  const pend = uiLang === 'en' ? 'pending' : 'pendientes';
+  if (!online) return (
+    <View style={s.pill}>
+      <Text style={s.pillText}>● {off}{pendings > 0 ? ` · ${pendings} ${pend}` : ''}</Text>
+    </View>
+  );
   return (
     <View style={s.pill}>
-      <Text style={s.pillText}>● {!online ? 'SIN CONEXIÓN' : `${pendings} pendientes`}{!online && pendings > 0 ? ` · ${pendings} pendientes` : ''}</Text>
+      <Text style={s.pillText}>● {pendings} {pend}</Text>
     </View>
   );
 }
 
 export function TierPill({ tier, onPress }: { tier: TierId; onPress?: () => void }) {
   const t = tierById(tier);
+  const dotColor = tier === 'CIBI' ? C.green : tier === 'CIBI_PRO' ? C.blue : C.purple;
   return (
-    <TouchableOpacity style={s.tierPill} onPress={onPress}>
-      <Text style={s.tierPillText}>{t.emoji} {t.label} ▾</Text>
+    <TouchableOpacity style={s.tierPill} onPress={onPress} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+      <View style={s.tierRow}><View style={[s.dot, { backgroundColor: dotColor }]} /><Text style={s.tierPillText}>{t.label}</Text></View>
     </TouchableOpacity>
   );
 }
@@ -54,18 +63,18 @@ export function TierDetailsSheet() {
       <View style={s.sheetWrap}>
         <View style={s.sheet}>
           <ScrollView>
-            <Text style={s.h2}>ⓘ Detalles de modelos</Text>
+            <Text style={s.h2}>Detalles de modelos</Text>
             <Text style={s.small}>Una sola fuente: TIER_ROSTER · catálogo v{CATALOG_VERSION} · datos demo sintéticos</Text>
-            {TIER_ROSTER.map((t) => (
-              <View key={t.id} style={s.tierCard}>
-                <Text style={s.tierTitle}>{t.emoji} {t.label} · {t.where === 'phone' ? 'en tu teléfono' : 'peer local'} · Modo: {t.mode}</Text>
-                {t.models.map((m) => (
+            {TIER_ROSTER.map((tt) => (
+              <View key={tt.id} style={s.tierCard}>
+                <Text style={s.tierTitle}>{tt.label} · {tt.where === 'phone' ? 'en tu teléfono' : 'peer local'} · Modo: {tt.mode}</Text>
+                {tt.models.map((m) => (
                   <Text key={m.name} style={s.small}>
                     • {m.name} ({m.quant}) — {m.engine}{m.ctx ? ` ctx ${m.ctx}` : ''} — {m.approxSize} — {m.license}{'\n  '}{m.resolvesTo}
                   </Text>
                 ))}
-                <Text style={s.small}>HW: {t.hw}</Text>
-                <Text style={s.small}>Fallback: {t.fallback}</Text>
+                <Text style={s.small}>HW: {tt.hw}</Text>
+                <Text style={s.small}>Fallback: {tt.fallback}</Text>
               </View>
             ))}
             <Text style={s.h2}>Últimos spans</Text>
@@ -85,7 +94,9 @@ export function TierDetailsSheet() {
 const s = StyleSheet.create({
   pill: { backgroundColor: 'rgba(34,197,94,.14)', borderColor: 'rgba(34,197,94,.45)', borderWidth: 1, borderRadius: 20, paddingVertical: 5, paddingHorizontal: 10 },
   pillText: { color: C.green, fontSize: 11, fontWeight: '700' },
-  tierPill: { backgroundColor: '#1E1E28', borderColor: '#3A3A45', borderWidth: 1, borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12 },
+  tierPill: { backgroundColor: '#1E1E28', borderColor: '#3A3A45', borderWidth: 1, borderRadius: 16, paddingVertical: 6, paddingHorizontal: 12, minHeight: 44, justifyContent: 'center' },
+  tierRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
   tierPillText: { color: '#fff', fontSize: 12, fontWeight: '800' },
   chip: { borderRadius: 10, paddingVertical: 3, paddingHorizontal: 9, alignSelf: 'flex-start' },
   chipText: { color: '#fff', fontSize: 11, fontWeight: '700' },

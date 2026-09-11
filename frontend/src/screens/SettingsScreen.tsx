@@ -4,13 +4,16 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { C, Disclaimer } from '../components/atoms';
+import { Icon } from '../components/Icon';
 import { useApp } from '../state/AppState';
+import { useStrings } from '../i18n/useStrings';
 import { TIER_ROSTER } from '../qvac/TIER_ROSTER';
 import { recentSpans, readPerfFile } from '../qvac/perf';
 import { pushOutbox, checkHealth } from '../api/backend';
 
 export default function SettingsScreen() {
   const { tier, setTier, uiLang, setUiLang, backendBase, setBackendBase, setDetailsOpen, refreshPendings } = useApp();
+  const t = useStrings();
   const [host, setHost] = useState(backendBase);
   const [syncing, setSyncing] = useState(false);
   const [perfDump, setPerfDump] = useState<string | null>(null);
@@ -34,53 +37,53 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={s.wrap} contentContainerStyle={{ gap: 14, paddingBottom: 24 }}>
-      <Text style={s.h1}>Ajustes</Text>
+      <Text style={s.h1}>{t.settings}</Text>
       <Text style={s.sub}>Asistente, idioma, servidor y privacidad</Text>
       <View style={s.card}>
-        <Text style={s.h3}>💬 Asistente</Text>
-        {TIER_ROSTER.map((t) => (
-          <View key={t.id} style={[s.tier, tier === t.id && s.tierOn]}>
+        <Text style={s.h3}>{t.assistant}</Text>
+        {TIER_ROSTER.map((tt) => (
+          <View key={tt.id} style={[s.tier, tier === tt.id && s.tierOn]}>
             <View style={s.row}>
-              <Text style={s.tierText}>{t.emoji} {t.label}{t.id !== 'CIBI' ? ' 🔒' : ''}{'\n'}<Text style={s.sub}>{t.tagline}</Text></Text>
+              <Text style={s.tierText}>{tt.label}{tt.id !== 'CIBI' ? ' · locked' : ''}{'\n'}<Text style={s.sub}>{tt.tagline}</Text></Text>
               <TouchableOpacity
-                style={[s.use, tier === t.id && s.using]}
-                onPress={() => (t.id === 'CIBI' ? setTier(t.id) : Alert.alert('Bloqueado (P1)', 'Necesita peer QVAC verificado en LAN con ese equipo cargado.'))}
+                style={[s.use, tier === tt.id && s.using]}
+                onPress={() => (tt.id === 'CIBI' ? setTier(tt.id) : Alert.alert('Bloqueado (P1)', 'Necesita peer QVAC verificado en LAN con ese equipo cargado.'))}
               >
-                <Text style={s.useText}>{tier === t.id ? 'En uso' : 'Usar'}</Text>
+                <Text style={s.useText}>{tier === tt.id ? 'En uso' : 'Usar'}</Text>
               </TouchableOpacity>
             </View>
           </View>
         ))}
-        <TouchableOpacity onPress={() => setDetailsOpen(true)}><Text style={[s.sub, { textDecorationLine: 'underline' }]}>ⓘ Detalles de modelos (jurado + debug)</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => setDetailsOpen(true)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Text style={[s.sub, { textDecorationLine: 'underline' }]}>Detalles de modelos (jurado + debug)</Text></TouchableOpacity>
       </View>
       <View style={s.card}>
-        <Text style={s.h3}>Idioma / Language</Text>
+        <Text style={s.h3}>{t.language}</Text>
         <View style={s.seg}>
-          <TouchableOpacity style={[s.segBtn, uiLang === 'es' && s.segOn]} onPress={() => setUiLang('es')}><Text style={uiLang === 'es' ? s.segOnT : s.segT}>Español</Text></TouchableOpacity>
-          <TouchableOpacity style={[s.segBtn, uiLang === 'en' && s.segOn]} onPress={() => setUiLang('en')}><Text style={uiLang === 'en' ? s.segOnT : s.segT}>English</Text></TouchableOpacity>
+          <TouchableOpacity style={[s.segBtn, uiLang === 'es' && s.segOn]} onPress={() => setUiLang('es')} accessibilityRole="button"><Text style={uiLang === 'es' ? s.segOnT : s.segT}>Español</Text></TouchableOpacity>
+          <TouchableOpacity style={[s.segBtn, uiLang === 'en' && s.segOn]} onPress={() => setUiLang('en')} accessibilityRole="button"><Text style={uiLang === 'en' ? s.segOnT : s.segT}>English</Text></TouchableOpacity>
         </View>
-        <Text style={s.sub}>Idioma de la UI. La captura siempre acepta ES/PT y normaliza a EN (TranslatePsy).</Text>
+        <Text style={s.sub}>{t.languageNote}</Text>
       </View>
       <View style={s.card}>
-        <Text style={s.h3}>Servidor DRF (solo CRUD/sync, cero inferencia)</Text>
+        <Text style={s.h3}>{t.serverTitle}</Text>
         <TextInput style={s.txt} value={host} onChangeText={setHost} placeholder="http://IP-LAN:8000" placeholderTextColor="#6E6E78" autoCapitalize="none" />
         <View style={{ height: 8 }} />
-        <TouchableOpacity style={s.btn} onPress={() => { setBackendBase(host); sync(); }} disabled={syncing}>
-          {syncing ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>Guardar + sincronizar ahora</Text>}
+        <TouchableOpacity style={s.btn} onPress={() => { setBackendBase(host); sync(); }} disabled={syncing} accessibilityRole="button">
+          {syncing ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>{t.saveSync}</Text>}
         </TouchableOpacity>
         <Text style={s.sub}>En Android Studio con emulator usa 10.0.2.2; en teléfono físico usa la IP LAN del host DRF.</Text>
       </View>
       <View style={s.card}>
         <Text style={s.h3}>Peers QVAC en LAN (P1 — desbloquean Pro/Super)</Text>
-        <Text style={s.sub}>Sin peer verificado siguen 🔒. Peer = proceso QVAC aparte, NO el backend Django. Foto/audio crudos se quedan en el teléfono salvo permiso explícito.</Text>
+        <Text style={s.sub}>Sin peer verificado siguen bloqueados. Peer = proceso QVAC aparte, NO el backend Django. Foto/audio crudos se quedan en el teléfono salvo permiso explícito.</Text>
       </View>
       <View style={s.card}>
-        <Text style={s.h3}>Rendimiento (F09)</Text>
-        {spans.length === 0 ? <Text style={s.sub}>Sin spans aún.</Text> : spans.map((p, i) => (
+        <Text style={s.h3}>{t.perfTitle}</Text>
+        {spans.length === 0 ? <Text style={s.sub}>{t.noSpans}</Text> : spans.map((p, i) => (
           <Text key={i} style={s.sub}>{p.phase} · {p.model} · load {p.load_ms ?? '-'}ms · TTFT {p.ttft_ms ?? '-'}ms</Text>
         ))}
         <TouchableOpacity style={[s.btn, s.ghost]} onPress={async () => setPerfDump(await readPerfFile())}>
-          <Text style={[s.btnText, { color: '#fff' }]}>Ver PERF_LOG.jsonl</Text>
+          <Text style={[s.btnText, { color: '#fff' }]}>{t.viewPerf}</Text>
         </TouchableOpacity>
         {perfDump != null ? <Text style={[s.sub, { marginTop: 8 }]} numberOfLines={12}>{perfDump.slice(-1500) || '(vacío)'}</Text> : null}
       </View>

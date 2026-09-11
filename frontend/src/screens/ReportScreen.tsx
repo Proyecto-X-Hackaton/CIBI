@@ -8,14 +8,17 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIn
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { C, Disclaimer } from '../components/atoms';
+import { Icon } from '../components/Icon';
 import { useApp } from '../state/AppState';
+import { useStrings } from '../i18n/useStrings';
 import { getReportVersions, getInspection, saveReportVersion } from '../db/database';
 import { TIER_ROSTER } from '../qvac/TIER_ROSTER';
 
 export default function ReportScreen({ inspectionId }: { inspectionId: string }) {
   const { setWizard, setDetailsOpen, tier, setTier } = useApp();
+  const t = useStrings();
   const [versions, setVersions] = useState<any[]>([]);
-  const [customer, setCustomer] = useState('Hospital Alpha');
+  const [customer, setCustomer] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const reload = async () => {
@@ -30,7 +33,7 @@ export default function ReportScreen({ inspectionId }: { inspectionId: string })
 
   const regen = async () => {
     if (tier !== 'CIBI') {
-      Alert.alert('Peer bloqueado (P1)', '🔵/🟣 necesitan un peer QVAC verificado. El informe 🟢 del teléfono es el flujo juzgado.');
+      Alert.alert('Peer bloqueado (P1)', 'Pro/Super necesitan un peer QVAC verificado. El informe CIBI del teléfono es el flujo juzgado.');
       return;
     }
     setBusy(true);
@@ -45,7 +48,7 @@ export default function ReportScreen({ inspectionId }: { inspectionId: string })
       const items = (latestJson?.items ?? []).map((it: any) => `<tr><td><b>${it.modality ?? ''}</b></td><td>${it.qty ?? ''}</td><td>${it.age_text ?? it.age ?? ''}</td><td>${it.confidence ?? it.conf ?? ''}</td></tr>`).join('');
       const html = `<html><body style="font-family:sans-serif">
         <h1>Informe · ${customer}</h1>
-        <p>Reporte v${latest?.version ?? 1} · 🟢 CIBI · sintético</p>
+        <p>Reporte v${latest?.version ?? 1} · ${tier} · sintético</p>
         <p><b>Extracción de inventario de equipamiento. No es diagnóstico clínico.</b></p>
         <table border="1" cellpadding="6"><tr><th>Tipo</th><th>Cant.</th><th>Edad</th><th>Conf.</th></tr>${items}</table>
         <p>Procedencia: tier ${latest?.tier ?? 'CIBI'} · offline · synthetic:true</p>
@@ -63,42 +66,42 @@ export default function ReportScreen({ inspectionId }: { inspectionId: string })
 
   return (
     <ScrollView style={s.wrap} contentContainerStyle={{ gap: 14, paddingBottom: 24 }}>
-      <Text style={s.back}>‹ Inspecciones · <Text style={{ color: '#fff' }}>{customer}</Text> · sintético</Text>
-      <Text style={s.h1}>Informe · {customer}</Text>
-      <Text style={s.sub}>Reporte v{latest?.version ?? '—'} · 🟢 CIBI · inspección editable siempre</Text>
+      <Text style={s.back}>‹ Inspecciones · <Text style={{ color: '#fff' }}>{customer ?? 'Sin sede'}</Text> · {t.synthetic}</Text>
+      <Text style={s.h1}>{t.report} · {customer ?? '—'}</Text>
+      <Text style={s.sub}>Reporte v{latest?.version ?? '—'} · {tier} · inspección editable siempre</Text>
       <View style={s.card}>
         <Text style={s.h3}>Generar con</Text>
         <View style={s.tierbar}>
-          {TIER_ROSTER.map((t) => (
-            <TouchableOpacity key={t.id} style={[s.tier, tier === t.id && s.tierOn]} onPress={() => (t.id === 'CIBI' ? setTier(t.id) : Alert.alert('Bloqueado', `${t.label} necesita peer QVAC verificado (P1).`))}>
-              <Text style={s.tierText}>{t.emoji} {t.label}{t.id !== 'CIBI' ? ' · 🔒' : ''}</Text>
+          {TIER_ROSTER.map((tt) => (
+            <TouchableOpacity key={tt.id} style={[s.tier, tier === tt.id && s.tierOn]} onPress={() => (tt.id === 'CIBI' ? setTier(tt.id) : Alert.alert('Bloqueado', `${tt.label} necesita peer QVAC verificado (P1).`))}>
+              <Text style={s.tierText}>{tt.label}{tt.id !== 'CIBI' ? ' · locked' : ''}</Text>
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={s.sub}>Preselección 🟢 CIBI · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>ⓘ detalles</Text></Text>
+        <Text style={s.sub}>Preselección {tier} · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>detalles</Text></Text>
       </View>
       <View style={s.card}>
         <Text style={s.h3}>Parque instalado (informe v{latest?.version ?? '—'})</Text>
         {(latestJson?.items ?? []).map((it: any, i: number) => (
           <View key={i} style={s.row}><Text style={s.cell}>{it.modality}</Text><Text style={s.cell}>{it.qty}</Text><Text style={s.cell}>{it.age_text ?? it.age ?? '—'}</Text><Text style={s.cell}>{it.confidence ?? it.conf ?? ''}</Text></View>
         ))}
-        {(latestJson?.items ?? []).length === 0 && <Text style={s.sub}>Sin informe aún — vuelve a Revisar y guarda.</Text>}
+        {(latestJson?.items ?? []).length === 0 && <Text style={s.sub}>{t.noReportYet}</Text>}
       </View>
       <View style={s.card}>
         <Text style={s.h3}>Historial informe + inspección</Text>
         {versions.map((v) => (
-          <Text key={v.id} style={s.sub}>📄 Informe v{v.version} · {v.tier} · {new Date(v.created_at).toLocaleDateString()}</Text>
+          <View key={v.id} style={s.histRow}><Icon name="report" size={14} color={C.muted} /><Text style={s.sub}>Informe v{v.version} · {v.tier} · {new Date(v.created_at).toLocaleDateString()}</Text></View>
         ))}
       </View>
       <View style={{ gap: 10 }}>
-        <TouchableOpacity style={s.cta2} onPress={regen} disabled={busy}>
-          <Text style={s.ctaText}>{busy ? '…' : '⟳ Re-generar informe'}</Text>
+        <TouchableOpacity style={s.cta2} onPress={regen} disabled={busy} accessibilityRole="button">
+          <Text style={s.ctaText}>{busy ? '…' : t.regenerate}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.secondary} onPress={exportPdf} disabled={busy}>
-          <Text style={s.secText}>📄 Exportar PDF · compartir</Text>
+        <TouchableOpacity style={s.secondary} onPress={exportPdf} disabled={busy} accessibilityRole="button">
+          <Text style={s.secText}>{t.exportPdf}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.ghost} onPress={() => setWizard({ name: 'chat', inspectionId })}>
-          <Text style={s.ghostText}>Editar inspección · añadir evidencia</Text>
+        <TouchableOpacity style={s.ghost} onPress={() => setWizard({ name: 'chat', inspectionId })} accessibilityRole="button">
+          <Text style={s.ghostText}>{t.editInspection}</Text>
         </TouchableOpacity>
       </View>
       {busy ? <ActivityIndicator color={C.green} /> : null}
@@ -119,6 +122,7 @@ const s = StyleSheet.create({
   tierOn: { borderColor: C.green, backgroundColor: 'rgba(34,197,94,.12)' },
   tierText: { color: '#D6D6DE', fontSize: 11, fontWeight: '700', textAlign: 'center' },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomColor: C.border, borderBottomWidth: 1 },
+  histRow: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingVertical: 4 },
   cell: { color: C.text, fontSize: 13, flex: 1 },
   cta2: { backgroundColor: C.green, borderRadius: 14, minHeight: 52, justifyContent: 'center' },
   ctaText: { color: '#04120A', fontWeight: '800', fontSize: 15, textAlign: 'center' },

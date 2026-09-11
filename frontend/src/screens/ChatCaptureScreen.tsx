@@ -10,15 +10,20 @@ import * as ImagePicker from 'expo-image-picker';
 import * as FileSystem from 'expo-file-system';
 import { Audio } from 'expo-av';
 import { C, Disclaimer } from '../components/atoms';
+import { Icon } from '../components/Icon';
 import { useApp } from '../state/AppState';
+import { useStrings } from '../i18n/useStrings';
 import { getMessages, appendMessage, savePhotoEvidence, getInspection, updateInspection, mediaDir, type ChatMsg } from '../db/database';
 import { normalizeToEnglish } from '../qvac/translate';
 import { describePhoto, readLabelText } from '../qvac/visionOcr';
+import { structureEntities } from '../qvac/structure';
+import { recentSpans } from '../qvac/perf';
 import { matchCatalog, guidanceText } from '../catalog/catalog';
 import { transcribeAudio } from '../qvac/voice';
 
 export default function ChatCaptureScreen({ inspectionId }: { inspectionId: string }) {
   const { setWizard, setDetailsOpen, tier } = useApp();
+  const t = useStrings();
   const [msgs, setMsgs] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
@@ -32,7 +37,7 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
     (async () => {
       const cur = await getMessages(inspectionId).catch(() => []);
       if (cur.length === 0) {
-        const hello: ChatMsg = { role: 'assistant', text_original: '👋 Soy tu asistente de inventario. Háblame en ES/PT y te guío: qué mirar, qué foto tomar, a quién preguntar.', lang: null, text_en: null };
+        const hello: ChatMsg = { role: 'assistant', text_original: 'Soy tu asistente de inventario. Háblame en ES/PT y te guío: qué mirar, qué foto tomar, a quién preguntar.', lang: null, text_en: null };
         await appendMessage(inspectionId, hello);
         reload();
       }
@@ -50,17 +55,35 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
     const text = input.trim();
     if (!text || busy) return;
     setInput('');
-    setBusy('Traduciendo…');
     await push({ role: 'user', text_original: text, lang: null, text_en: null });
     try {
-      const { text_en, lang, untranslated } = await normalizeToEnglish({ text });
+      setBusy('Traduciendo (TranslatePsy on-device)…');
+      const { text_en, lang, untranslated } = await normalizeToEnglish({
+        text,
+        onProgress: (pct, stage) => { if (pct != null) setBusy(`Traduciendo ${pct}%…`); },
+      });
+      setBusy('Estructurando (MedPsy-1.7B on-device)…');
+      let structLine = '';
+      let structMethod = 'regex-fallback';
+      try {
+        const rep = await structureEntities({
+          text_en,
+          onProgress: (pct, stage) => { if (stage === 'load') setBusy('Cargando MedPsy-1.7B…'); else if (stage === 'infer') setBusy('Estructurando (MedPsy-1.7B)…'); },
+        });
+        const parts = rep.items.map((it) => `${it.qty} ${it.modality}${it.manufacturer ? ` ${it.manufacturer}` : ''} (${it.confidence})`);
+        if (parts.length > 0) {
+          structLine = `MedPsy detectó: ${parts.join(' / ')}.`;
+          structMethod = rep.confidence_map?.fallback ? 'regex-fallback' : 'MedPsy-1.7B Q4_K_M';
+        }
+      } catch { structLine = ''; }
       const match = matchCatalog(text_en);
-      // Patch inspection customer/city guess is done at review (MedPsy). Here: guidance.
       const counts = quickCounts(text_en);
       const guide = guidanceText(match);
+      const span = recentSpans(1)[0];
+      const perfLine = span ? `\n\n[${structMethod} · load ${span.load_ms ?? '-'}ms${span.ttft_ms ? ` · TTFT ${span.ttft_ms}ms` : ''}]` : `\n\n[${structMethod}]`;
       await push({
         role: 'assistant',
-        text_original: `Anoté ${counts || 'tu reporte'}. ${untranslated ? '(traducción no disponible offline — uso original)' : ''}\n\n🤖 Lo más valioso: ${nextQuestion(text_en)}\n\n${guide}`,
+        text_original: `Anoté ${structLine || counts || 'tu reporte'}.${untranslated ? ' (traducción no disponible — uso original, marcado sin traducir)' : ''}\n\nLo más valioso: ${nextQuestion(text_en)}\n\n${guide}${perfLine}`,
         lang,
         text_en,
       });
@@ -76,7 +99,7 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
     if (!authorized) {
       Alert.alert('Foto autorizada', 'Confirma que el sitio autoriza fotografiar la placa del equipo.', [
         { text: 'No autorizado', style: 'cancel' },
-        { text: '☑ Autorizada', onPress: () => { setAuthorized(true); setTimeout(takePhoto, 300); } },
+        { text: 'Autorizada', onPress: () => { setAuthorized(true); setTimeout(takePhoto, 300); } },
       ]);
       return;
     }
@@ -101,7 +124,7 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
       const agree = !!vision.modality_guess && ocrRes.joinedText.length > 0;
       await push({
         role: 'assistant',
-        text_original: `📷 Placa recibida. Texto leído ${ocrRes.topConfidence.toFixed(2)} · modalidad ${vision.modality_guess ?? '?'} ✓\n${ocrRes.joinedText ? `Leído: ${ocrRes.joinedText.slice(0, 160)}` : 'Sin texto legible — vale la descripción visual.'}${agree ? '\n✓ Foto+texto coinciden → candidato a Confirmed en Revisar.' : ''}`,
+        text_original: `Placa recibida (VisionPsy-Flash + OCR on-device). Texto ${ocrRes.topConfidence.toFixed(2)} · modalidad ${vision.modality_guess ?? '?'}${ocrRes.joinedText ? `\nLeído: ${ocrRes.joinedText.slice(0, 160)}` : '\nSin texto legible — vale la descripción visual.'}${agree ? '\nFoto+texto coinciden → candidato a Confirmed en Revisar.' : ''}`,
         lang: null,
         text_en: vision.raw || null,
       });
@@ -148,11 +171,23 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
 
   return (
     <View style={s.wrap}>
-      <View style={s.step}><Text style={s.stepText}>‹ Salir · Paso 1 de 2 — Chat experto · Borrador ●</Text></View>
+      <TouchableOpacity
+        style={s.stepBtn}
+        onPress={() => setWizard(null)}
+        accessibilityRole="button"
+        accessibilityLabel={t.exitWizard}
+        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+      >
+        <Text style={s.stepText}>{t.wizardStep}</Text>
+      </TouchableOpacity>
       <View style={s.tierbar}>
-        {(['CIBI', 'CIBI_PRO', 'CIBI_SUPER'] as const).map((t) => (
-          <View key={t} style={[s.tier, t === 'CIBI' && s.tierOn]}>
-            <Text style={s.tierText}>{t === 'CIBI' ? '🟢 CIBI' : t === 'CIBI_PRO' ? '🔵 CIBI Pro · 🔒' : '🟣 CIBI Super · 🔒'}</Text>
+        {(['CIBI', 'CIBI_PRO', 'CIBI_SUPER'] as const).map((tt) => (
+          <View key={tt} style={[s.tier, tt === 'CIBI' && s.tierOn]}>
+            <View style={s.tierRow}>
+              <View style={[s.dot, tt === 'CIBI' ? s.dotGreen : tt === 'CIBI_PRO' ? s.dotBlue : s.dotPurple]} />
+              <Text style={s.tierText}>{tt === 'CIBI' ? 'CIBI' : tt === 'CIBI_PRO' ? 'CIBI Pro' : 'CIBI Super'}{tt !== 'CIBI' ? ' · ' : ''}</Text>
+              {tt !== 'CIBI' ? <Icon name="close" size={12} color="#A7A7B3" /> : null}
+            </View>
           </View>
         ))}
       </View>
@@ -161,7 +196,7 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
           <View key={i} style={[s.bubble, m.role === 'user' ? s.user : s.ai]}>
             <Text style={s.msgText}>{m.text_original}</Text>
             {m.role === 'user' && m.text_en ? <Text style={s.meta}>ES/PT detectado → EN guardado</Text> : null}
-            {m.role === 'assistant' ? <Text style={s.meta}>{tier === 'CIBI' ? '🟢 CIBI' : tier} · en tu teléfono · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>ⓘ detalles</Text></Text> : null}
+            {m.role === 'assistant' ? <Text style={s.meta}>{tier} · en tu teléfono · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>detalles</Text></Text> : null}
           </View>
         ))}
         {busy ? <View style={[s.bubble, s.ai]}><ActivityIndicator color={C.green} /><Text style={s.meta}>{busy} (modelo on-device, uno a la vez)</Text></View> : null}
@@ -169,14 +204,14 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
       <View style={s.composer}>
         <View style={s.wabar}>
           <View style={s.inputwrap}>
-            <TextInput style={s.input} placeholder="Escribe un mensaje…" placeholderTextColor="#6E6E78" value={input} onChangeText={setInput} multiline />
-            <TouchableOpacity onPress={takePhoto}><Text style={s.attach}>📷</Text></TouchableOpacity>
-            <TouchableOpacity onPress={toggleRecord}><Text style={[s.attach, recording && { color: C.amber }]}>{recording ? '⏹️' : '🎙️'}</Text></TouchableOpacity>
+            <TextInput style={s.input} placeholder={t.chatPlaceholder} placeholderTextColor="#6E6E78" value={input} onChangeText={setInput} multiline />
+            <TouchableOpacity onPress={takePhoto} style={s.iconBtn} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Icon name="camera" size={20} color="#C9C9D4" /></TouchableOpacity>
+            <TouchableOpacity onPress={toggleRecord} style={s.iconBtn} accessibilityRole="button" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Icon name={recording ? 'stop' : 'mic'} size={20} color={recording ? C.amber : '#C9C9D4'} /></TouchableOpacity>
           </View>
-          <TouchableOpacity style={s.send} onPress={sendText}><Text style={s.sendText}>➤</Text></TouchableOpacity>
+          <TouchableOpacity style={s.send} onPress={sendText} accessibilityRole="button" disabled={!input.trim() || !!busy}><Icon name="send" size={20} color="#04120A" /></TouchableOpacity>
         </View>
-        <TouchableOpacity style={s.cta} onPress={() => setWizard({ name: 'review', inspectionId })}>
-          <Text style={s.ctaText}>Pasar a revisar →</Text>
+        <TouchableOpacity style={s.cta} onPress={() => setWizard({ name: 'review', inspectionId })} accessibilityRole="button">
+          <Text style={s.ctaText}>{t.goReview}</Text>
         </TouchableOpacity>
       </View>
       <Disclaimer />
@@ -210,11 +245,17 @@ function nextQuestion(en: string): string {
 const s = StyleSheet.create({
   wrap: { flex: 1 },
   step: { paddingHorizontal: 16, paddingTop: 10 },
+  stepBtn: { paddingHorizontal: 16, paddingTop: 10, minHeight: 48, justifyContent: 'center' },
   stepText: { color: C.muted, fontSize: 12 },
   tierbar: { flexDirection: 'row', gap: 6, padding: 10 },
   tier: { flex: 1, borderRadius: 12, padding: 7, borderWidth: 1, borderColor: '#34343F', backgroundColor: '#1A1A24' },
   tierOn: { borderColor: C.green, backgroundColor: 'rgba(34,197,94,.12)' },
   tierText: { color: '#D6D6DE', fontSize: 10.5, fontWeight: '700', textAlign: 'center' },
+  tierRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5 },
+  dot: { width: 8, height: 8, borderRadius: 4 },
+  dotGreen: { backgroundColor: C.green },
+  dotBlue: { backgroundColor: '#3B82F6' },
+  dotPurple: { backgroundColor: '#A78BFA' },
   chat: { flex: 1, paddingHorizontal: 16 },
   bubble: { maxWidth: '88%', borderRadius: 16, padding: 12 },
   ai: { backgroundColor: C.surface, borderColor: C.border, borderWidth: 1, alignSelf: 'flex-start' },
@@ -225,9 +266,8 @@ const s = StyleSheet.create({
   wabar: { flexDirection: 'row', gap: 8, alignItems: 'flex-end' },
   inputwrap: { flex: 1, flexDirection: 'row', alignItems: 'center', backgroundColor: '#1E1E28', borderColor: '#3A3A45', borderWidth: 1, borderRadius: 26, paddingLeft: 14, minHeight: 52 },
   input: { flex: 1, color: '#fff', fontSize: 14 },
-  attach: { fontSize: 19, padding: 8, color: '#C9C9D4' },
+  iconBtn: { padding: 10, minWidth: 44, minHeight: 44, justifyContent: 'center', alignItems: 'center' },
   send: { width: 52, height: 52, borderRadius: 26, backgroundColor: C.green, justifyContent: 'center', alignItems: 'center' },
-  sendText: { fontSize: 19, color: '#04120A', fontWeight: '800' },
   cta: { backgroundColor: C.green, borderRadius: 14, minHeight: 50, justifyContent: 'center', marginTop: 8 },
   ctaText: { color: '#04120A', fontWeight: '800', fontSize: 15, textAlign: 'center' },
 });

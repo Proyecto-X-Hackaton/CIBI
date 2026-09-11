@@ -9,6 +9,8 @@ import React from 'react';
 import { SafeAreaView, StatusBar, StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
 import { AppProvider, useApp } from './src/state/AppState';
 import { C, OfflineBadge, TierPill, TierDetailsSheet, Disclaimer } from './src/components/atoms';
+import { Icon, type IconName } from './src/components/Icon';
+import { useStrings } from './src/i18n/useStrings';
 import HomeScreen from './src/screens/HomeScreen';
 import ChatCaptureScreen from './src/screens/ChatCaptureScreen';
 import ReviewScreen from './src/screens/ReviewScreen';
@@ -18,7 +20,8 @@ import PanelScreen from './src/screens/PanelScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 
 function Shell() {
-  const { tab, setTab, wizard, setWizard, tier, online, pendings, setDetailsOpen, ready } = useApp();
+  const { tab, setTab, wizard, setWizard, tier, online, pendings, setDetailsOpen, ready, refreshPendings } = useApp();
+  const t = useStrings();
 
   if (!ready) {
     return (
@@ -45,8 +48,14 @@ function Shell() {
           ) : (
             <ReportScreen inspectionId={wizard.inspectionId} />
           )}
-          <TouchableOpacity style={s.exitbar} onPress={() => setWizard(null)}>
-            <Text style={s.exitText}>✕ Salir a Inicio (borrador guardado local)</Text>
+          <TouchableOpacity
+            style={s.exitbar}
+            onPress={() => { refreshPendings(); setWizard(null); }}
+            accessibilityRole="button"
+            accessibilityLabel={t.exitWizard}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          >
+            <Text style={s.exitText}>{t.exitWizard}</Text>
           </TouchableOpacity>
         </View>
       ) : (
@@ -58,14 +67,20 @@ function Shell() {
           <View style={s.tabbar}>
             {(
               [
-                ['home', '🏠', 'Inicio'],
-                ['panel', '📊', 'Panel'],
-                ['network', '🗺️', 'Red'],
-                ['settings', '⚙️', 'Ajustes'],
+                ['home', 'home', t.home],
+                ['panel', 'panel', t.panel],
+                ['network', 'network', t.network],
+                ['settings', 'settings', t.settings],
               ] as const
             ).map(([id, icon, label]) => (
-              <TouchableOpacity key={id} style={s.tab} onPress={() => setTab(id)}>
-                <Text style={s.tabIcon}>{icon}</Text>
+              <TouchableOpacity
+                key={id}
+                style={s.tab}
+                onPress={() => setTab(id)}
+                accessibilityRole="button"
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Icon name={icon as IconName} size={22} color={tab === id ? C.green : '#6E6E78'} />
                 <Text style={[s.tabLabel, tab === id && s.tabActive]}>{label}</Text>
               </TouchableOpacity>
             ))}
@@ -91,11 +106,10 @@ const s = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   appbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 8 },
   brand: { color: C.text, fontWeight: '800', fontSize: 15 },
-  exitbar: { padding: 10, borderTopColor: C.border, borderTopWidth: 1, backgroundColor: '#101016' },
-  exitText: { color: C.muted, fontSize: 12, textAlign: 'center' },
+  exitbar: { minHeight: 56, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 14, borderTopColor: C.border, borderTopWidth: 1, backgroundColor: '#101016' },
+  exitText: { color: C.text, fontSize: 15, fontWeight: '700', textAlign: 'center' },
   tabbar: { flexDirection: 'row', borderTopColor: C.border, borderTopWidth: 1, backgroundColor: '#101016', paddingBottom: 18, paddingTop: 8 },
-  tab: { flex: 1, alignItems: 'center', gap: 3 },
-  tabIcon: { fontSize: 19 },
+  tab: { flex: 1, alignItems: 'center', gap: 3, minHeight: 48, justifyContent: 'center' },
   tabLabel: { fontSize: 10, color: '#6E6E78' },
   tabActive: { color: C.green, fontWeight: '700' },
 });

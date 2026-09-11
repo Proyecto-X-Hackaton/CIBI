@@ -3,10 +3,13 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import * as Network from 'expo-network';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { TierId } from '../qvac/TIER_ROSTER';
 import type { UiLang } from '../i18n/strings';
 import { ensureSeed } from '../db/seed';
 import { pendingCount } from '../db/database';
+
+const UI_LANG_KEY = '@cibi:ui-lang';
 
 export type TopTab = 'home' | 'panel' | 'network' | 'settings';
 export type Wizard = { name: 'chat'; inspectionId: string } | { name: 'review'; inspectionId: string } | { name: 'report'; inspectionId: string } | null;
@@ -47,8 +50,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     pendingCount().then(setPendings).catch(() => {});
   };
 
+  const persistUiLang = (l: UiLang) => {
+    setUiLang(l);
+    AsyncStorage.setItem(UI_LANG_KEY, l).catch(() => {});
+  };
+
   useEffect(() => {
     (async () => {
+      try {
+        const saved = await AsyncStorage.getItem(UI_LANG_KEY);
+        if (saved === 'es' || saved === 'en') setUiLang(saved);
+      } catch {}
       try {
         await ensureSeed();
       } catch {}
@@ -58,16 +70,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const t = setInterval(async () => {
       try {
         const s = await Network.getNetworkStateAsync();
-        setOnline(!!(s.isConnected && s.isInternetReachable !== false ? s.isConnected : s.isConnected));
+        setOnline(!!s.isConnected && s.isInternetReachable !== false);
       } catch {}
       refreshPendings();
     }, 5000);
-    Network.getNetworkStateAsync().then((s) => setOnline(!!s.isConnected)).catch(() => {});
+    Network.getNetworkStateAsync().then((s) => setOnline(!!s.isConnected && s.isInternetReachable !== false)).catch(() => {});
     return () => clearInterval(t);
   }, []);
 
   return (
-    <Ctx.Provider value={{ tab, setTab, wizard, setWizard, tier, setTier, uiLang, setUiLang, online, pendings, refreshPendings, backendBase, setBackendBase, detailsOpen, setDetailsOpen, ready }}>
+    <Ctx.Provider value={{ tab, setTab, wizard, setWizard, tier, setTier, uiLang, setUiLang: persistUiLang, online, pendings, refreshPendings, backendBase, setBackendBase, detailsOpen, setDetailsOpen, ready }}>
       {children}
     </Ctx.Provider>
   );

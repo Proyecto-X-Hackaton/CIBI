@@ -74,10 +74,10 @@ export function guidanceText(m: CatalogMatch): string {
   if (!m.entry) return `Sin coincidencia en catálogo v${CATALOG_VERSION}. Se registra lo reportado con confianza Unknown — sin inventar.`;
   const e = m.entry;
   return (
-    `📖 Guía catálogo ${e.modality} · ${e.family} v${CATALOG_VERSION}\n` +
+    `Guía catálogo ${e.modality} · ${e.family} v${CATALOG_VERSION}\n` +
     `• Placa: ${e.point_of_interest[0]}\n` +
-    `• 📷 Prioridad: 1) ${e.photo_priority[0]} 2) ${e.photo_priority[1]}\n` +
-    `• 🙋 Preguntar: ${e.staff_question[0]}`
+    `• Prioridad foto: 1) ${e.photo_priority[0]} 2) ${e.photo_priority[1]}\n` +
+    `• Preguntar: ${e.staff_question[0]}`
   );
 }
 
