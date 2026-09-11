@@ -2,35 +2,50 @@
   "expo": {
     "name": "CIBI",
     "slug": "cibi",
+    "scheme": "cibi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": true,
+    "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#0B0B0F"
     },
+    "assetBundlePatterns": ["**/*"],
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.cibi"
+      "supportsTablet": false
     },
     "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
-      },
-      "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.cibi"
-    },
-    "web": {
-      "favicon": "./assets/favicon.png"
+      "package": "com.cibi.app",
+      "versionCode": 1
     },
     "plugins": [
-      "expo-build-properties",
-      "expo-sqlite"
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minSdkVersion": 29
+          }
+        }
+      ],
+      "@qvac/sdk/expo-plugin",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "CIBI usa la cámara solo para fotografiar placas de equipos donde esté autorizado. La foto nunca sale del teléfono para inferencia."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "CIBI accede a fotos solo para adjuntar evidencia de equipos a la inspección local."
+        }
+      ],
+      [
+        "expo-av",
+        {
+          "microphonePermission": "CIBI usa el micrófono solo para dictar la inspección en el teléfono (transcripción on-device, opcional)."
+        }
+      ]
     ]
   }
 }

@@ -1,0 +1,96 @@
+// visionOcr.ts — F02: 1 authorized photo → modality guess + label text.
+// VisionPsy-Nano-460M-FLASH pair + image_no_upscale:'on' (mismatch silently
+// degrades — never mix with the _1 Base pair). Then OCR_LATIN. Merge rule:
+// OCR text wins for model/serial; vision wins for modality/scene.
+// Conflict → Estimated, never Confirmed. Confirmed only on photo+text
+// agreement or revisit (enforced in structure/confidence utils).
+
+import { VISIONPSY_NANO_460M_MULTIMODAL_Q8_0, MMPROJ_VISIONPSY_NANO_460M_MULTIMODAL_Q8_0, OCR_LATIN } from '@qvac/sdk';
+import { runCompletion, runOcr } from './qvacClient';
+
+export interface VisionResult {
+  modality_guess: string | null;
+  manufacturer_guess: string | null;
+  model_guess: string | null;
+  label_text_free: string | null;
+  raw: string;
+}
+
+export interface OcrResult {
+  blocks: Array<{ text: string; bbox?: number[]; confidence?: number }>;
+  topConfidence: number;
+  joinedText: string;
+}
+
+const VISION_PROMPT =
+  'Identify the medical imaging equipment in this photo and transcribe visible label data as JSON. ' +
+  'Equipment inventory only. Return ONLY strict JSON: ' +
+  '{"modality_guess": "MR|CT|US|XR|null", "manufacturer_guess": string|null, "model_guess": string|null, "label_text_free": string|null}. ' +
+  'Unknown → null. No medical advice.';
+
+export async function describePhoto(opts: {
+  photoPath: string;
+  onProgress?: (pct: number | null, stage: string) => void;
+}): Promise<VisionResult> {
+  try {
+    const { text } = await runCompletion({
+      tier: 'CIBI',
+      modelConst: VISIONPSY_NANO_460M_MULTIMODAL_Q8_0,
+      modelName: 'VISIONPSY_NANO_460M_MULTIMODAL_Q8_0',
+      quant: 'Q8_0',
+      engine: 'llamacpp-completion',
+      modelConfig: {
+        ctx_size: 1024,
+        projectionModelSrc: MMPROJ_VISIONPSY_NANO_460M_MULTIMODAL_Q8_0,
+        image_no_upscale: 'on',
+      },
+      ctx_size: 1024,
+      image_no_upscale: 'on',
+      history: [{ role: 'user', content: VISION_PROMPT, attachments: [{ path: opts.photoPath }] }],
+      onProgress: opts.onProgress,
+    });
+    const parsed = tryParseVisionJson(text);
+    return { ...parsed, raw: text };
+  } catch {
+    return { modality_guess: null, manufacturer_guess: null, model_guess: null, label_text_free: null, raw: '' };
+  }
+}
+
+function tryParseVisionJson(text: string): Omit<VisionResult, 'raw'> {
+  const empty = { modality_guess: null, manufacturer_guess: null, model_guess: null, label_text_free: null };
+  try {
+    const start = text.indexOf('{');
+    const end = text.lastIndexOf('}');
+    if (start < 0 || end <= start) return empty;
+    const obj = JSON.parse(text.slice(start, end + 1));
+    const mod = String(obj.modality_guess ?? '').toUpperCase();
+    return {
+      modality_guess: ['MR', 'CT', 'US', 'XR'].includes(mod) ? mod : null,
+      manufacturer_guess: obj.manufacturer_guess ? String(obj.manufacturer_guess) : null,
+      model_guess: obj.model_guess ? String(obj.model_guess) : null,
+      label_text_free: obj.label_text_free ? String(obj.label_text_free) : null,
+    };
+  } catch {
+    return empty;
+  }
+}
+
+export async function readLabelText(opts: {
+  photoPath: string;
+  onProgress?: (pct: number | null, stage: string) => void;
+}): Promise<OcrResult> {
+  try {
+    const { blocks } = await runOcr({
+      tier: 'CIBI',
+      modelConst: OCR_LATIN,
+      modelName: 'OCR_LATIN',
+      image: opts.photoPath,
+      onProgress: opts.onProgress,
+    });
+    const joinedText = blocks.map((b) => b.text).join('\n').trim();
+    const topConfidence = blocks.reduce((m, b) => Math.max(m, Number(b.confidence ?? 0)), 0);
+    return { blocks, topConfidence, joinedText };
+  } catch {
+    return { blocks: [], topConfidence: 0, joinedText: '' };
+  }
+}
