@@ -36,7 +36,8 @@
         "expo-build-properties",
         {
           "android": {
-            "minSdkVersion": 29
+            "minSdkVersion": 29,
+            "usesCleartextTraffic": true
           }
         }
       ],
@@ -44,7 +45,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "CIBI usa la cámara solo para fotografiar placas de equipos donde esté autorizado. La foto nunca sale del teléfono para inferencia."
+          "cameraPermission": "CIBI usa la cámara solo para fotografiar placas de equipos donde esté autorizado. CIBI local mantiene la foto en el teléfono; Pro/Super puede enviarla al peer QVAC LAN seleccionado."
         }
       ],
       [

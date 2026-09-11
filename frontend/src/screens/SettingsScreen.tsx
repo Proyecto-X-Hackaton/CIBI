@@ -1,7 +1,7 @@
-// SettingsScreen — SCREEN_05: tiers + UI lang + backend host + perf.
-// Peers 🔵/🟣 locked P1 (muestran qué falta). Sync manual = push outbox.
+// SettingsScreen — SCREEN_05: tiers + UI lang + backend/peer hosts + perf.
+// Pro/Super are selectable only when the configured LAN QVAC peer publishes the required models.
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
 import { Disclaimer } from '../components/atoms';
 import { useTheme, type ThemeMode } from '../../theme/ThemeContext';
@@ -13,21 +13,53 @@ import { useApp } from '../state/AppState';
 import { useStrings } from '../i18n/useStrings';
 import { TIER_ROSTER } from '../qvac/TIER_ROSTER';
 import { recentSpans, readPerfFile } from '../qvac/perf';
-import { pushOutbox, checkHealth } from '../api/backend';
+import { pushOutbox, checkHealth, type HealthReason } from '../api/backend';
 import { downloadAsset, heartbeat, BERGAMOT_ES_EN, BERGAMOT_PT_EN, VISIONPSY_NANO_460M_MULTIMODAL_Q8_0, MMPROJ_VISIONPSY_NANO_460M_MULTIMODAL_Q8_0, OCR_LATIN, PARAKEET_TDT_0_6B_V3_Q8_0, HEALTHCARE_1_7B_MEDICAL_Q4_K_M } from '@qvac/sdk';
 import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
 import * as Device from 'expo-device';
 import { fetchModelStatuses, testChat, fmtBytes, type ModelStatus } from '../qvac/modelStatus';
+import type { Strings } from '../i18n/strings';
+import type { PeerHealthReason } from '../qvac/peerClient';
+
+// task-07: never a generic "Sin servidor" — map the health reason to a
+// specific, actionable sentence (i18n ES/EN).
+function reasonText(reason: HealthReason, t: Strings): string {
+  switch (reason) {
+    case 'ok': return t.srvOk;
+    case 'timeout': return t.srvTimeout;
+    case 'unreachable': return t.srvUnreachable;
+    case 'bad_body': return t.srvBadBody;
+    case 'http_400': return t.srvHttp400;
+    case 'http_404': return t.srvHttp404;
+    default: return t.srvHttpOther.replace('{code}', reason.replace('http_', ''));
+  }
+}
+
+function peerReasonText(reason: PeerHealthReason, t: Strings): string {
+  switch (reason) {
+    case 'ok': return t.peerOk;
+    case 'timeout': return t.peerTimeout;
+    case 'unreachable': return t.peerUnreachable;
+    case 'http_401': return t.peerHttp401;
+    case 'http_404': return t.peerHttp404;
+    case 'bad_body': return t.peerBadBody;
+    default: return t.peerHttpOther.replace('{code}', '4xx/5xx');
+  }
+}
 
 export default function SettingsScreen() {
-  const { tier, setTier, uiLang, setUiLang, backendBase, setBackendBase, setDetailsOpen, refreshPendings } = useApp();
+  const { tier, selectTier, uiLang, setUiLang, backendBase, setBackendBase, peerBase, setPeerBase, peerStatus, refreshPeer, setDetailsOpen, refreshPendings } = useApp();
   const t = useStrings();
   const { theme: th, mode, setMode } = useTheme();
   const s = useThemedStyles(makeStyles);
   const insets = useSafeAreaInsets();
   const [host, setHost] = useState(backendBase);
+  const [peerHost, setPeerHost] = useState(peerBase);
   const [syncing, setSyncing] = useState(false);
+  const [peerBusy, setPeerBusy] = useState(false);
+  const [tierBusy, setTierBusy] = useState(false);
+  const [healthMsg, setHealthMsg] = useState<string | null>(null);
   const [perfDump, setPerfDump] = useState<string | null>(null);
   const [dlBusy, setDlBusy] = useState(false);
   const [dlMsg, setDlMsg] = useState<string | null>(null);
@@ -37,17 +69,55 @@ export default function SettingsScreen() {
   const [testMsg, setTestMsg] = useState<string | null>(null);
   const spans = recentSpans(6);
 
+  useEffect(() => {
+    setPeerHost(peerBase);
+  }, [peerBase]);
+
+  const savePeer = async () => {
+    setPeerBusy(true);
+    const base = peerHost.trim().replace(/\/+$/, '');
+    setPeerBase(base);
+    const status = await refreshPeer(base);
+    setPeerBusy(false);
+    if (!status.ok) {
+      setHealthMsg(null);
+      Alert.alert(t.peerUnavailable, `${peerReasonText(status.reason, t)}\n\n${status.url}`);
+    }
+  };
+
+  const chooseTier = async (next: typeof tier) => {
+    if (next === tier || tierBusy) return;
+    setTierBusy(true);
+    const ok = await selectTier(next);
+    setTierBusy(false);
+    if (!ok) Alert.alert(t.peerUnavailable, `${peerStatus ? peerReasonText(peerStatus.reason, t) : t.peerUnreachable}\n\n${peerBase}`);
+  };
+
   const sync = async () => {
     setSyncing(true);
     try {
-      const ok = await checkHealth(host);
-      if (!ok) {
-        Alert.alert('Sin servidor', 'Sigo offline — todo queda en outbox PENDING. La demo no se bloquea.');
+      // Diagnostics first (task-07): reason + attempted URL, never a bare boolean.
+      const health = await checkHealth(host);
+      setHealthMsg(`${health.ok ? '●' : '○'} ${reasonText(health.reason, t)} · ${health.url}`);
+      if (!health.ok) {
+        Alert.alert(
+          reasonText(health.reason, t),
+          `${t.triedUrl.replace('{url}', health.url)}\n\n${t.srvChecklist.replace('{url}', health.url)}`,
+        );
         return;
       }
-      const { pushed } = await pushOutbox(host);
+      const { pushed, failures } = await pushOutbox(host);
       refreshPendings();
-      Alert.alert('Sync', `${pushed} registro(s) subidos (idempotente por client_uuid).`);
+      if (failures.length === 0) {
+        Alert.alert(t.syncTitle, t.syncPushed.replace('{n}', String(pushed)));
+      } else {
+        const f = failures[0];
+        const first = t.syncRowFailed.replace('{id}', String(f.id)).replace('{entity}', f.entity).replace('{error}', f.error);
+        Alert.alert(
+          t.syncTitle,
+          `${t.syncPushed.replace('{n}', String(pushed))}\n\n${first}${failures.length > 1 ? ` (+${failures.length - 1})` : ''}`,
+        );
+      }
     } finally {
       setSyncing(false);
     }
@@ -62,10 +132,11 @@ export default function SettingsScreen() {
         {TIER_ROSTER.map((tt) => (
           <View key={tt.id} style={[s.tier, tier === tt.id && s.tierOn]}>
             <View style={s.row}>
-              <Text style={s.tierText}>{tt.label}{tt.id !== 'CIBI' ? ' · locked' : ''}{'\n'}<Text style={s.sub}>{tt.tagline}</Text></Text>
+              <Text style={s.tierText}>{tt.label}{tt.where === 'peer' ? ' · LAN' : ''}{'\n'}<Text style={s.sub}>{tt.tagline}</Text></Text>
               <TouchableOpacity
                 style={[s.use, tier === tt.id && s.using]}
-                onPress={() => (tt.id === 'CIBI' ? setTier(tt.id) : Alert.alert('Bloqueado (P1)', 'Necesita peer QVAC verificado en LAN con ese equipo cargado.'))}
+                onPress={() => chooseTier(tt.id)}
+                disabled={tierBusy}
               >
                 <Text style={[s.useText, tier === tt.id && s.usingText]}>{tier === tt.id ? 'En uso' : 'Usar'}</Text>
               </TouchableOpacity>
@@ -99,11 +170,22 @@ export default function SettingsScreen() {
         <TouchableOpacity style={s.btn} onPress={() => { setBackendBase(host); sync(); }} disabled={syncing} accessibilityRole="button">
           {syncing ? <ActivityIndicator color={ON_DARK} /> : <Text style={s.btnText}>{t.saveSync}</Text>}
         </TouchableOpacity>
-        <Text style={s.sub}>En Android Studio con emulator usa 10.0.2.2; en teléfono físico usa la IP LAN del host DRF.</Text>
+        {healthMsg ? <Text style={[s.sub, { marginTop: 8 }]} selectable>{healthMsg}</Text> : null}
+        <Text style={[s.sub, { marginTop: 8 }]}>{t.srvRunbook}</Text>
       </View>
       <View style={s.card}>
-        <Text style={s.h3}>Peers QVAC en LAN (P1 — desbloquean Pro/Super)</Text>
-        <Text style={s.sub}>Sin peer verificado siguen bloqueados. Peer = proceso QVAC aparte, NO el backend Django. Foto/audio crudos se quedan en el teléfono salvo permiso explícito.</Text>
+        <Text style={s.h3}>{t.peerTitle}</Text>
+        <Text style={s.sub}>{t.peerNote}</Text>
+        <TextInput style={[s.txt, { marginTop: 10 }]} value={peerHost} onChangeText={setPeerHost} placeholder={t.peerPlaceholder} placeholderTextColor={th.muted} autoCapitalize="none" autoCorrect={false} keyboardType="url" />
+        <TouchableOpacity style={s.btn} onPress={savePeer} disabled={peerBusy} accessibilityRole="button">
+          {peerBusy ? <ActivityIndicator color={ON_DARK} /> : <Text style={s.btnText}>{t.peerCheck}</Text>}
+        </TouchableOpacity>
+        {peerStatus ? (
+          <Text style={[s.sub, { marginTop: 8 }]} selectable>
+            {peerStatus.ok ? `● ${t.peerOk} · ${peerStatus.url}` : `○ ${peerReasonText(peerStatus.reason, t)} · ${peerStatus.url}`}
+            {peerStatus.models.length > 0 ? `\n${t.peerModels.replace('{models}', peerStatus.models.map((m) => `${m.id}:${m.state ?? 'unknown'}`).join(', '))}` : ''}
+          </Text>
+        ) : <Text style={[s.sub, { marginTop: 8 }]}>{t.peerUnreachable}</Text>}
       </View>
       <View style={s.card}>
         <Text style={s.h3}>Modelos on-device · estado</Text>
