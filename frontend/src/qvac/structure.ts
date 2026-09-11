@@ -5,6 +5,9 @@
 
 import { HEALTHCARE_1_7B_MEDICAL_Q4_K_M } from '@qvac/sdk';
 import { runCompletion } from './qvacClient';
+import { peerChat, PEER_MODELS } from './peerClient';
+import type { TierId } from './TIER_ROSTER';
+import { OFFLINE_ROUTE, offlineFallback, peerRoute, type RouteMeta } from './route';
 import { repairJson } from '../utils/jsonRepair';
 import { containsBannedClinicalClaim } from '../utils/safety';
 
@@ -38,6 +41,44 @@ const SYSTEM_PROMPT =
   '"items":[{"modality":"MR|CT|US|XR","manufacturer":string|null,"model":string|null,"qty":number,' +
   '"age_text":string|null,"age_years":number|null,"confidence":"Confirmed|Reported|Estimated|Unknown","source":"text|photo|ocr|catalog"}]}. ' +
   'Unknown → null with confidence Unknown. Never invent manufacturers. Equipment inventory only — no clinical content of any kind.';
+
+// QVAC OpenAI-compatible chat supports json_schema. This prevents a peer
+// reasoning model from spending the whole max_tokens budget on thinking and
+// returning an incomplete JSON object.
+export const EQUIPMENT_RESPONSE_FORMAT = {
+  type: 'json_schema',
+  json_schema: {
+    name: 'equipment_inventory',
+    schema: {
+      type: 'object',
+      properties: {
+        customer: { type: ['string', 'null'] },
+        city: { type: ['string', 'null'] },
+        country: { type: ['string', 'null'] },
+        items: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              modality: { type: 'string', enum: ['MR', 'CT', 'US', 'XR'] },
+              manufacturer: { type: ['string', 'null'] },
+              model: { type: ['string', 'null'] },
+              qty: { type: 'number' },
+              age_text: { type: ['string', 'null'] },
+              age_years: { type: ['number', 'null'] },
+              confidence: { type: 'string', enum: ['Confirmed', 'Reported', 'Estimated', 'Unknown'] },
+              source: { type: 'string', enum: ['text', 'photo', 'ocr', 'catalog'] },
+            },
+            required: ['modality', 'manufacturer', 'model', 'qty', 'age_text', 'age_years', 'confidence', 'source'],
+            additionalProperties: false,
+          },
+        },
+      },
+      required: ['customer', 'city', 'country', 'items'],
+      additionalProperties: false,
+    },
+  },
+} as const;
 
 export function emptyReport(): StructuredReport {
   return { customer: null, city: null, country: null, items: [], confidence_map: {} };
@@ -80,12 +121,51 @@ export function structureFallback(text_en: string, visionHint?: string | null, o
   return regexFallback(text_en, visionHint, ocrHint);
 }
 
-export async function structureEntities(opts: {
+export interface StructureResult {
+  report: StructuredReport;
+  route: RouteMeta;
+}
+
+export interface StructureInput {
   text_en: string;
   visionHint?: string | null;
   ocrHint?: string | null;
+  tier?: TierId;
+  peerBase?: string;
   onProgress?: (pct: number | null, stage: string) => void;
-}): Promise<StructuredReport> {
+}
+
+export async function structureEntitiesWithRoute(opts: StructureInput): Promise<StructureResult> {
+  const tier = opts.tier ?? 'CIBI';
+  if (tier !== 'CIBI' && opts.peerBase) {
+    try {
+      opts.onProgress?.(null, 'peer-structure');
+      const { text } = await peerChat({
+        base: opts.peerBase,
+        tier,
+        model: PEER_MODELS.blue,
+        maxTokens: 1024,
+        reasoningBudget: 0,
+        responseFormat: EQUIPMENT_RESPONSE_FORMAT,
+        messages: buildStructureHistory(opts),
+      });
+      const report = parseStructureText(text);
+      lastError = null;
+      return { report, route: peerRoute(opts.peerBase) };
+    } catch (peerError) {
+      lastError = String(peerError instanceof Error ? peerError.message : peerError);
+      opts.onProgress?.(null, 'peer-fallback');
+      return { report: await runLocalStructure(opts), route: offlineFallback(opts.peerBase, peerError) };
+    }
+  }
+  return { report: await runLocalStructure(opts), route: OFFLINE_ROUTE };
+}
+
+export async function structureEntities(opts: StructureInput): Promise<StructuredReport> {
+  return (await structureEntitiesWithRoute(opts)).report;
+}
+
+async function runLocalStructure(opts: StructureInput): Promise<StructuredReport> {
   try {
     lastError = null;
     const { text } = await runCompletion({
@@ -103,7 +183,7 @@ export async function structureEntities(opts: {
     return parseStructureText(text);
   } catch (e: any) {
     // Fallback (TECH_STACK §4): VisionPsy+regex structuring, disclose downgrade.
-    lastError = String(e?.message ?? e ?? 'load-failed');
+    lastError = lastError ?? String(e?.message ?? e ?? 'load-failed');
     return regexFallback(opts.text_en, opts.visionHint, opts.ocrHint);
   }
 }

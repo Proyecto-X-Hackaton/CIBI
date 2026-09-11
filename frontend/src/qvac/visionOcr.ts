@@ -7,6 +7,9 @@
 
 import { VISIONPSY_NANO_460M_MULTIMODAL_Q8_0, MMPROJ_VISIONPSY_NANO_460M_MULTIMODAL_Q8_0, OCR_LATIN } from '@qvac/sdk';
 import { runCompletion, runOcr } from './qvacClient';
+import { peerOcr, peerVision } from './peerClient';
+import type { TierId } from './TIER_ROSTER';
+import { OFFLINE_ROUTE, offlineFallback, peerRoute, type RouteMeta } from './route';
 
 export interface VisionResult {
   modality_guess: string | null;
@@ -14,12 +17,14 @@ export interface VisionResult {
   model_guess: string | null;
   label_text_free: string | null;
   raw: string;
+  route: RouteMeta;
 }
 
 export interface OcrResult {
   blocks: Array<{ text: string; bbox?: number[]; confidence?: number }>;
   topConfidence: number;
   joinedText: string;
+  route: RouteMeta;
 }
 
 const VISION_PROMPT =
@@ -33,10 +38,38 @@ const VISION_PROMPT =
 
 export async function describePhoto(opts: {
   photoPath: string;
+  tier?: TierId;
+  peerBase?: string;
   onProgress?: (pct: number | null, stage: string) => void;
 }): Promise<VisionResult> {
+  const tier = opts.tier ?? 'CIBI';
+  if (tier !== 'CIBI' && opts.peerBase) {
+    try {
+      opts.onProgress?.(null, 'peer-vision');
+      const text = await peerVision({ base: opts.peerBase, tier, photoPath: opts.photoPath, prompt: VISION_PROMPT });
+      const parsed = tryParseVisionJson(text);
+      const prose = text.split('{')[0].trim();
+      const label = parsed.label_text_free || (prose.length > 8 ? prose.slice(0, 300) : null);
+      return { ...parsed, label_text_free: label, raw: text, route: peerRoute(opts.peerBase) };
+    } catch (peerError) {
+      opts.onProgress?.(null, 'peer-fallback');
+      try {
+        const local = await runLocalVision(opts);
+        return { ...local, route: offlineFallback(opts.peerBase, peerError) };
+      } catch {
+        return { modality_guess: null, manufacturer_guess: null, model_guess: null, label_text_free: null, raw: '', route: offlineFallback(opts.peerBase, peerError) };
+      }
+    }
+  }
   try {
-    const { text } = await runCompletion({
+    return await runLocalVision(opts);
+  } catch {
+    return { modality_guess: null, manufacturer_guess: null, model_guess: null, label_text_free: null, raw: '', route: OFFLINE_ROUTE };
+  }
+}
+
+async function runLocalVision(opts: { photoPath: string; onProgress?: (pct: number | null, stage: string) => void }): Promise<VisionResult> {
+  const { text } = await runCompletion({
       tier: 'CIBI',
       modelConst: VISIONPSY_NANO_460M_MULTIMODAL_Q8_0,
       modelName: 'VISIONPSY_NANO_460M_MULTIMODAL_Q8_0',
@@ -59,13 +92,10 @@ export async function describePhoto(opts: {
     // conversational pass can talk about the photo even when JSON is partial.
     const prose = text.split('{')[0].trim();
     const label = parsed.label_text_free || (prose.length > 8 ? prose.slice(0, 300) : null);
-    return { ...parsed, label_text_free: label, raw: text };
-  } catch {
-    return { modality_guess: null, manufacturer_guess: null, model_guess: null, label_text_free: null, raw: '' };
-  }
+    return { ...parsed, label_text_free: label, raw: text, route: OFFLINE_ROUTE };
 }
 
-function tryParseVisionJson(text: string): Omit<VisionResult, 'raw'> {
+function tryParseVisionJson(text: string): Omit<VisionResult, 'raw' | 'route'> {
   const empty = { modality_guess: null, manufacturer_guess: null, model_guess: null, label_text_free: null };
   try {
     const start = text.indexOf('{');
@@ -86,10 +116,36 @@ function tryParseVisionJson(text: string): Omit<VisionResult, 'raw'> {
 
 export async function readLabelText(opts: {
   photoPath: string;
+  tier?: TierId;
+  peerBase?: string;
   onProgress?: (pct: number | null, stage: string) => void;
 }): Promise<OcrResult> {
+  const tier = opts.tier ?? 'CIBI';
+  if (tier !== 'CIBI' && opts.peerBase) {
+    try {
+      opts.onProgress?.(null, 'peer-ocr');
+      const text = await peerOcr({ base: opts.peerBase, tier, photoPath: opts.photoPath });
+      const blocks = text ? [{ text, confidence: 0.5 }] : [];
+      return { blocks, topConfidence: blocks[0]?.confidence ?? 0, joinedText: text, route: peerRoute(opts.peerBase) };
+    } catch (peerError) {
+      opts.onProgress?.(null, 'peer-fallback');
+      try {
+        const local = await runLocalOcr(opts);
+        return { ...local, route: offlineFallback(opts.peerBase, peerError) };
+      } catch {
+        return { blocks: [], topConfidence: 0, joinedText: '', route: offlineFallback(opts.peerBase, peerError) };
+      }
+    }
+  }
   try {
-    const { blocks } = await runOcr({
+    return await runLocalOcr(opts);
+  } catch {
+    return { blocks: [], topConfidence: 0, joinedText: '', route: OFFLINE_ROUTE };
+  }
+}
+
+async function runLocalOcr(opts: { photoPath: string; onProgress?: (pct: number | null, stage: string) => void }): Promise<OcrResult> {
+  const { blocks } = await runOcr({
       tier: 'CIBI',
       modelConst: OCR_LATIN,
       modelName: 'OCR_LATIN',
@@ -98,8 +154,5 @@ export async function readLabelText(opts: {
     });
     const joinedText = blocks.map((b) => b.text).join('\n').trim();
     const topConfidence = blocks.reduce((m, b) => Math.max(m, Number(b.confidence ?? 0)), 0);
-    return { blocks, topConfidence, joinedText };
-  } catch {
-    return { blocks: [], topConfidence: 0, joinedText: '' };
-  }
+    return { blocks, topConfidence, joinedText, route: OFFLINE_ROUTE };
 }

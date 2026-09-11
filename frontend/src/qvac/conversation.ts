@@ -10,6 +10,9 @@
 
 import { HEALTHCARE_1_7B_MEDICAL_Q4_K_M } from '@qvac/sdk';
 import { runCompletion } from './qvacClient';
+import { peerChat, PEER_MODELS } from './peerClient';
+import type { TierId } from './TIER_ROSTER';
+import { OFFLINE_ROUTE, offlineFallback, peerRoute, type RouteMeta } from './route';
 import { containsBannedClinicalClaim } from '../utils/safety';
 import type { StructuredReport } from './structure';
 
@@ -101,8 +104,27 @@ export function fallbackDialogueReply(opts: DialogueInput & { structuredMethod: 
 export async function generateAssistantReply(opts: DialogueInput & {
   structuredMethod: string;
   modelError?: string | null;
+  tier?: TierId;
+  peerBase?: string;
   onProgress?: (pct: number | null, stage: string) => void;
-}): Promise<{ reply: string; method: string }> {
+}): Promise<{ reply: string; method: string; route: RouteMeta }> {
+  const tier = opts.tier ?? 'CIBI';
+  if (tier !== 'CIBI' && opts.peerBase) {
+    try {
+      opts.onProgress?.(null, 'peer-dialogue');
+      const model = tier === 'CIBI_SUPER' ? PEER_MODELS.super : PEER_MODELS.blue;
+      const { text } = await peerChat({ base: opts.peerBase, tier, model, maxTokens: tier === 'CIBI_SUPER' ? 1536 : 1024, reasoningBudget: tier === 'CIBI_SUPER' ? 512 : 256, messages: buildDialogueHistory(opts) });
+      return { reply: parseDialogueText(text), method: `${model} (peer)`, route: peerRoute(opts.peerBase) };
+    } catch (peerError) {
+      opts.onProgress?.(null, 'peer-fallback');
+      try {
+        const local = await generateAssistantReply({ ...opts, tier: 'CIBI', peerBase: undefined });
+        return { ...local, route: offlineFallback(opts.peerBase, peerError) };
+      } catch {
+        return { reply: fallbackDialogueReply(opts), method: opts.structuredMethod, route: offlineFallback(opts.peerBase, peerError) };
+      }
+    }
+  }
   try {
     const { text } = await runCompletion({
       tier: 'CIBI',
@@ -116,11 +138,11 @@ export async function generateAssistantReply(opts: DialogueInput & {
       history: buildDialogueHistory(opts),
       onProgress: opts.onProgress,
     });
-    return { reply: parseDialogueText(text), method: 'MedPsy-1.7B Q4_K_M' };
+    return { reply: parseDialogueText(text), method: 'MedPsy-1.7B Q4_K_M', route: OFFLINE_ROUTE };
   } catch (e: any) {
     // Honest contextual fallback: references what we DO know, asks the
     // single most valuable question. Never the old fixed template.
-    return { reply: fallbackDialogueReply({ ...opts, modelError: String(e?.message ?? e) }), method: opts.structuredMethod };
+    return { reply: fallbackDialogueReply({ ...opts, modelError: String(e?.message ?? e) }), method: opts.structuredMethod, route: OFFLINE_ROUTE };
   }
 }
 

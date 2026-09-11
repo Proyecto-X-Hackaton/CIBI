@@ -26,6 +26,7 @@ import { answerChatTurn } from '../qvac/turn';
 import type { DialogueTurn } from '../qvac/conversation';
 import { matchCatalog } from '../catalog/catalog';
 import { transcribeAudio } from '../qvac/voice';
+import type { InferenceMode } from '../qvac/route';
 
 function buildPhotoSummary(vision: { modality_guess: string | null; manufacturer_guess: string | null; model_guess: string | null; label_text_free: string | null }, ocrText: string): string {
   const parts: string[] = [];
@@ -47,7 +48,7 @@ function turnsFromMessages(msgs: ChatMsg[]): DialogueTurn[] {
 }
 
 export default function ChatCaptureScreen({ inspectionId }: { inspectionId: string }) {
-  const { setWizard, setDetailsOpen, tier } = useApp();
+  const { setWizard, setDetailsOpen, tier, peerBase, selectTier } = useApp();
   const t = useStrings();
   const { theme: th } = useTheme();
   const s = useThemedStyles(makeStyles);
@@ -60,6 +61,8 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
   const [recSecs, setRecSecs] = useState(0);
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [kbHeight, setKbHeight] = useState(0);
+  const [tierSwitching, setTierSwitching] = useState(false);
+  const [lastRoute, setLastRoute] = useState<InferenceMode>(tier === 'CIBI' ? 'offline' : 'peer');
   const scroll = useRef<ScrollView>(null);
   const recTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const recStart = useRef<number>(0);
@@ -94,6 +97,14 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
     await reload();
   };
 
+  const chooseTier = async (next: typeof tier) => {
+    if (next === tier || tierSwitching) return;
+    setTierSwitching(true);
+    const ok = await selectTier(next);
+    setTierSwitching(false);
+    if (!ok) Alert.alert('Peer QVAC no disponible', `No se pudo verificar ${peerBase}. Se mantiene ${tier}. Revisa Ajustes → Peer QVAC.`);
+  };
+
   const runAssistantTurn = async (opts: {
     userText: string;
     textEn: string;
@@ -107,9 +118,9 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
     const catalogHint = match.entry
       ? `${match.entry.modality} ${match.entry.family}: placa en ${match.entry.point_of_interest[0]}; conviene preguntar: ${match.entry.staff_question[0]}`
       : null;
-    // Single MedPsy residency: structure (hidden) + dialogue (visible).
-    setBusy('Anotando y pensando…');
-    const { reply } = await answerChatTurn({
+    // CIBI = on-device; Pro/Super = explicit local QVAC peer.
+    setBusy(tier === 'CIBI' ? 'Anotando y pensando…' : 'Consultando peer QVAC…');
+    const result = await answerChatTurn({
       textEn: opts.textEn,
       userText: opts.userText,
       lang: opts.lang,
@@ -117,14 +128,26 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
       baseTurns: opts.baseTurns,
       photoSummary: opts.photoSummary ?? null,
       catalogHint,
+      tier,
+      peerBase,
       onProgress: (_pct, stage) => {
-        if (stage === 'download') setBusy('Descargando modelo…');
+        if (stage === 'peer-fallback') setBusy('Peer no respondió; respaldo local…');
+        else if (stage === 'peer-structure') setBusy('Peer: anclando entidades…');
+        else if (stage === 'peer-dialogue') setBusy('Peer: redactando…');
+        else if (stage === 'peer-dialogue-retry') setBusy('Peer: respuesta directa…');
+        else if (stage.startsWith('local-')) {
+          const localStage = stage.slice('local-'.length);
+          if (localStage === 'download' || localStage === 'load') setBusy('Respaldo local: cargando MedPsy…');
+          else if (localStage === 'structure') setBusy('Respaldo local: estructurando…');
+          else if (localStage === 'dialogue') setBusy('Respaldo local: redactando…');
+        } else if (stage === 'download') setBusy('Descargando modelo…');
         else if (stage === 'load') setBusy('Cargando MedPsy…');
         else if (stage === 'structure') setBusy('Anotando equipos…');
         else if (stage === 'dialogue') setBusy('Pensando…');
       },
     });
-    await push({ role: 'assistant', text_original: reply, lang: opts.lang, text_en: null });
+    setLastRoute(result.route.mode);
+    await push({ role: 'assistant', text_original: result.reply, lang: opts.lang, text_en: null });
   };
 
   const sendText = async (override?: string) => {
@@ -135,9 +158,10 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
     await push({ role: 'user', text_original: text, lang: null, text_en: null });
     const baseTurns = turnsFromMessages([...msgs, { role: 'user' as const, text_original: text, lang: null, text_en: null }]);
     try {
-      setBusy('Traduciendo…');
-      const { text_en, lang, untranslated } = await normalizeToEnglish({ text });
-      await runAssistantTurn({ userText: text, textEn: text_en, lang, untranslated, baseTurns });
+      setBusy(tier === 'CIBI' ? 'Traduciendo…' : 'Peer: traduciendo…');
+      const normalized = await normalizeToEnglish({ text, tier, peerBase });
+      setLastRoute(normalized.route.mode);
+      await runAssistantTurn({ userText: text, textEn: normalized.text_en, lang: normalized.lang, untranslated: normalized.untranslated, baseTurns });
     } catch {
       await push({ role: 'assistant', text_original: 'Guardé tu mensaje localmente. Sin conexión sigo anotando — cuéntame un poco más o revisamos al final.', lang: null, text_en: null });
     } finally {
@@ -187,10 +211,12 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
       // Show the photo immediately so it never feels lost.
       await push({ role: 'user', text_original: 'Foto de placa', lang: null, text_en: null, photo_ref: path });
       // Sequential: vision first, then OCR (one model resident at a time).
-      setBusy('Viendo la foto…');
-      const vision = await describePhoto({ photoPath: path });
-      setBusy('Leyendo la placa…');
-      const ocrRes = await readLabelText({ photoPath: path });
+      setBusy(tier === 'CIBI' ? 'Viendo la foto…' : 'Peer: viendo la foto…');
+      const vision = await describePhoto({ photoPath: path, tier, peerBase });
+      setLastRoute(vision.route.mode);
+      setBusy(tier === 'CIBI' ? 'Leyendo la placa…' : 'Peer: leyendo la placa…');
+      const ocrRes = await readLabelText({ photoPath: path, tier, peerBase });
+      setLastRoute(ocrRes.route.mode);
       await savePhotoEvidence(inspectionId, path, true, ocrRes.blocks, vision);
       const summary = buildPhotoSummary(vision, ocrRes.joinedText);
       const ocrEn = ocrRes.joinedText.trim();
@@ -264,7 +290,8 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
         await FileSystem.makeDirectoryAsync(`${(FileSystem as any).documentDirectory}cibi/media/audio`, { intermediates: true }).catch(() => {});
         await FileSystem.copyAsync({ from: uri, to: dst }).catch(() => {});
         const audioPath = await FileSystem.getInfoAsync(dst).then((i) => (i.exists ? dst : uri)).catch(() => uri);
-        const { text, ok, error } = await transcribeAudio({ audioPath });
+        const { text, ok, error, route } = await transcribeAudio({ audioPath, tier, peerBase });
+        setLastRoute(route.mode);
         setBusy(null);
         if (ok) {
           setInput(text);
@@ -322,13 +349,12 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
       />
       <View style={s.tierbar}>
         {(['CIBI', 'CIBI_PRO', 'CIBI_SUPER'] as const).map((tt) => (
-          <View key={tt} style={[s.tier, tt === 'CIBI' && s.tierOn]}>
+          <TouchableOpacity key={tt} style={[s.tier, tt === tier && s.tierOn]} onPress={() => chooseTier(tt)} disabled={tierSwitching || !!busy} accessibilityRole="button">
             <View style={s.tierRow}>
               <View style={[s.dot, tt === 'CIBI' ? s.dotGreen : tt === 'CIBI_PRO' ? s.dotBlue : s.dotPurple]} />
-              <Text style={s.tierText}>{tt === 'CIBI' ? 'CIBI' : tt === 'CIBI_PRO' ? 'CIBI Pro' : 'CIBI Super'}{tt !== 'CIBI' ? ' · ' : ''}</Text>
-              {tt !== 'CIBI' ? <Icon name="close" size={12} color={th.muted} /> : null}
+              <Text style={s.tierText}>{tt === 'CIBI' ? 'CIBI' : tt === 'CIBI_PRO' ? 'CIBI Pro' : 'CIBI Super'}</Text>
             </View>
-          </View>
+          </TouchableOpacity>
         ))}
       </View>
       <ScrollView
@@ -347,10 +373,10 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
             ) : null}
             <Text style={s.msgText}>{m.text_original}</Text>
             {m.role === 'user' && m.text_en ? <Text style={s.meta}>ES/PT detectado → EN guardado</Text> : null}
-            {m.role === 'assistant' ? <Text style={s.meta}>{tier} · en tu teléfono · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>detalles</Text></Text> : null}
+            {m.role === 'assistant' ? <Text style={s.meta}>{tier} · {lastRoute === 'peer' ? 'peer QVAC local' : 'en tu teléfono'} · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>detalles</Text></Text> : null}
           </View>
         ))}
-        {busy ? <View style={[s.bubble, s.ai]}><ActivityIndicator color={th.green} /><Text style={s.meta}>{busy} (modelo on-device, uno a la vez)</Text></View> : null}
+        {busy ? <View style={[s.bubble, s.ai]}><ActivityIndicator color={th.green} /><Text style={s.meta}>{busy} ({tier === 'CIBI' ? 'modelo on-device' : 'QVAC peer LAN'}; fallback local)</Text></View> : null}
         {recording ? <View style={[s.bubble, s.ai]}><Text style={s.recText}>● Grabando {recSecs}s — habla ahora. Toca ■ para transcribir.</Text></View> : null}
         <Disclaimer />
       </ScrollView>

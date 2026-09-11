@@ -4,7 +4,8 @@
 //    (RAM < 4GB kills parallel loads). A promise mutex serializes everything.
 //  - Every span is logged via perf.logSpan (F09).
 //  - No cloud calls, no backend inference: this file never uses fetch/http.
-//    Peer mode (P1) reuses the same helpers against text payloads only.
+//    P1 peer HTTP is intentionally isolated in peerClient.ts; this module
+//    remains the on-device @qvac/sdk path only.
 //
 // Verified against @qvac/sdk 0.19.0 .d.ts:
 //  loadModel({modelSrc, modelType?, modelConfig?, onProgress?}) → modelId
@@ -34,6 +35,18 @@ import {
 } from '@qvac/sdk';
 import { logSpan, deviceLabel } from './perf';
 import type { TierId } from './TIER_ROSTER';
+
+// ---- on-device tier guard (P1 peer is HTTP, not SDK delegation) ----
+// @qvac/sdk 0.19.0 has no remote inference-delegation API. The explicit
+// LAN adapter lives in peerClient.ts; this guard ensures an accidental peer
+// tier passed to the on-device worker can never load a peer model on-phone.
+export const PEER_VERIFIED = false; // remote peer verification is separate
+
+/** Requested tier → tier actually runnable on this device. */
+export function effectiveTier(requested: TierId): TierId {
+  if (requested === 'CIBI') return 'CIBI';
+  return PEER_VERIFIED ? requested : 'CIBI';
+}
 
 // ---- one-model-at-a-time mutex ----
 let queue: Promise<void> = Promise.resolve();
@@ -114,6 +127,8 @@ async function collectTranslation(res: any): Promise<{ text: string; stats: any 
 export interface LoadedHandle {
   modelId: string;
   load_ms: number;
+  /** Resolved tier (effectiveTier) — source of truth for every span. */
+  tier: TierId;
 }
 
 /** downloadAsset (progress UX) + loadModel, with perf 'load' span. */
@@ -132,6 +147,7 @@ export async function acquireModel(opts: {
   onProgress?: ProgressCb;
 }): Promise<LoadedHandle> {
   const t0 = Date.now();
+  const tier = effectiveTier(opts.tier);
   try {
     opts.onProgress?.(0, 'download');
     await downloadAsset({
@@ -150,7 +166,7 @@ export async function acquireModel(opts: {
     await logSpan({
       ts: new Date().toISOString(),
       device: deviceLabel(),
-      tier: opts.tier,
+      tier,
       model: opts.modelName,
       quant: opts.quant,
       engine: opts.engine,
@@ -167,12 +183,12 @@ export async function acquireModel(opts: {
       peer_id: null,
       ok: true,
     });
-    return { modelId, load_ms };
+    return { modelId, load_ms, tier };
   } catch (e: any) {
     await logSpan({
       ts: new Date().toISOString(),
       device: deviceLabel(),
-      tier: opts.tier,
+      tier,
       model: opts.modelName,
       quant: opts.quant,
       engine: opts.engine,
@@ -226,6 +242,7 @@ export async function runCompletion(opts: {
       const h = await acquireModel({ ...opts, prompt_chars, onProgress: opts.onProgress });
       modelId = h.modelId;
       opts.onProgress?.(null, 'infer');
+      const tier = h.tier;
       const t0 = Date.now();
       const run: any = completion({
         modelId,
@@ -240,7 +257,7 @@ export async function runCompletion(opts: {
       await logSpan({
         ts: new Date().toISOString(),
         device: deviceLabel(),
-        tier: opts.tier,
+        tier,
         model: opts.modelName,
         quant: opts.quant,
         engine: opts.engine,
@@ -306,7 +323,7 @@ export async function runTranslate(opts: {
       await logSpan({
         ts: new Date().toISOString(),
         device: deviceLabel(),
-        tier: opts.tier,
+        tier: h.tier,
         model: opts.modelName,
         quant: opts.quant,
         engine: 'nmtcpp-translation',
@@ -365,7 +382,7 @@ export async function runOcr(opts: {
       await logSpan({
         ts: new Date().toISOString(),
         device: deviceLabel(),
-        tier: opts.tier,
+        tier: h.tier,
         model: opts.modelName,
         quant: '—',
         engine: 'ggml-ocr',
@@ -416,7 +433,7 @@ export async function runTranscribe(opts: {
       await logSpan({
         ts: new Date().toISOString(),
         device: deviceLabel(),
-        tier: opts.tier,
+        tier: h.tier,
         model: opts.modelName,
         quant: opts.quant,
         engine: 'parakeet-transcription',
@@ -472,7 +489,7 @@ export async function runRagSearch(opts: {
       await logSpan({
         ts: new Date().toISOString(),
         device: deviceLabel(),
-        tier: opts.tier,
+        tier: h.tier,
         model: opts.modelName,
         quant: opts.quant,
         engine: 'llamacpp-embedding',
@@ -525,7 +542,7 @@ export async function runEmbed(opts: {
       await logSpan({
         ts: new Date().toISOString(),
         device: deviceLabel(),
-        tier: opts.tier,
+        tier: h.tier,
         model: opts.modelName,
         quant: opts.quant,
         engine: 'llamacpp-embedding',

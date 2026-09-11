@@ -4,6 +4,8 @@
 
 import { GTE_LARGE_FP16 } from '@qvac/sdk';
 import { runRagSearch } from './qvacClient';
+import { peerEmbed } from './peerClient';
+import type { TierId } from './TIER_ROSTER';
 
 export interface DuplicateCandidate {
   candidate_id: string;
@@ -25,13 +27,45 @@ export function describeItem(label: string): string {
   return label;
 }
 
+function cosine(a: number[], b: number[]): number {
+  if (!a.length || a.length !== b.length) return 0;
+  let dot = 0;
+  let aa = 0;
+  let bb = 0;
+  for (let i = 0; i < a.length; i += 1) {
+    dot += a[i] * b[i];
+    aa += a[i] * a[i];
+    bb += b[i] * b[i];
+  }
+  return aa && bb ? dot / Math.sqrt(aa * bb) : 0;
+}
+
 export async function findDuplicates(opts: {
   siteWorkspace: string;
   newItemLabel: string;
   existingLabels: Array<{ id: string; label: string }>;
+  tier?: TierId;
+  peerBase?: string;
   onProgress?: (pct: number | null, stage: string) => void;
-}): Promise<{ candidates: DuplicateCandidate[]; method: 'rag' | 'keyword' }> {
+}): Promise<{ candidates: DuplicateCandidate[]; method: 'rag' | 'peer-embedding' | 'keyword' }> {
+  const tier = opts.tier ?? 'CIBI';
   const seedDocs = opts.existingLabels.map((e) => `[${e.id}] ${e.label}`);
+  if (tier !== 'CIBI' && opts.peerBase && opts.existingLabels.length > 0) {
+    try {
+      opts.onProgress?.(null, 'peer-embed');
+      const texts = [opts.newItemLabel, ...opts.existingLabels.map((e) => e.label)];
+      const { vectors } = await peerEmbed({ base: opts.peerBase, tier, text: texts });
+      if (vectors.length !== texts.length) throw new Error('peer-embedding-count-mismatch');
+      const candidates = opts.existingLabels
+        .map((e, i) => ({ candidate_id: e.id, label: e.label, similarity: cosine(vectors[0], vectors[i + 1]) }))
+        .filter((c) => c.similarity > 0.85)
+        .sort((a, b) => b.similarity - a.similarity)
+        .slice(0, 3);
+      return { candidates, method: 'peer-embedding' };
+    } catch {
+      // A peer embedding failure falls through to the on-device RAG/keyword path.
+    }
+  }
   try {
     const { results } = await runRagSearch({
       tier: 'CIBI',

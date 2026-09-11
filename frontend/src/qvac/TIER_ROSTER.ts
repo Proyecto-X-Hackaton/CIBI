@@ -65,12 +65,12 @@ export const TIER_ROSTER: TierEntry[] = [
     label: 'CIBI Pro',
     tagline: 'mejor calidad · peer local',
     where: 'peer',
-    locked: true,
+    locked: false,
     hw: 'Workstation peer local (modelo + HW pineados en setup del peer + qvac doctor verde)',
     mode: 'peer',
     fallback: 'Sin peer verificado: resultado 🟢 del teléfono. Timeout/desconexión → local con razón visible.',
     models: [
-      { name: 'HEALTHCARE_4B_MEDICAL_Q4_K_M', resolvesTo: 'MedPsy-4B (2.7GB; Q8_0 = 4.7GB)', quant: 'Q4_K_M', engine: 'llamacpp-completion', approxSize: '2.7–4.7GB', license: 'Apache-2.0', extra: 'Ancla entidades en el peer; Qwen nunca estructura solo.' },
+      { name: 'HEALTHCARE_4B_MEDICAL_Q8_0', resolvesTo: 'MedPsy-4B Q8_0 (4.7GB)', quant: 'Q8_0', engine: 'llamacpp-completion', approxSize: '~4.7GB', license: 'Apache-2.0', extra: 'Ancla entidades en el peer; Qwen nunca estructura solo.' },
     ],
   },
   {
@@ -79,12 +79,12 @@ export const TIER_ROSTER: TierEntry[] = [
     label: 'CIBI Super',
     tagline: 'máximo razonamiento · peer local',
     where: 'peer',
-    locked: true,
+    locked: false,
     hw: 'Workstation peer local (solo si el HW lo permite; si no, se omite y 🔵 es el techo)',
     mode: 'peer',
     fallback: 'Sin peer/HW: resultado 🟢 del teléfono. Qwen3.8-Flash MoE ~176B excluido como peer local (inviable); solo variante densa oficial menor pineada.',
     models: [
-      { name: 'QWEN3_5_4B_MULTIMODAL_Q4_K_M', resolvesTo: 'Qwen3.5-4B GGUF oficial (Apache-2.0, fichero exacto pineado en setup)', quant: 'Q4_K_M', engine: 'llamacpp-completion', approxSize: '~2–3GB', license: 'Apache-2.0', extra: 'Razona sobre texto/OCR/candidato; MedPsy-4B ancla entidades.' },
+      { name: 'QWEN3_5_9B_MULTIMODAL_Q6_K', resolvesTo: 'Qwen3.5-9B GGUF oficial (Apache-2.0; verificado en registry SDK 0.19.0; pairs MMPROJ_QWEN3_5_9B_MULTIMODAL_BF16/F16)', quant: 'Q6_K', engine: 'llamacpp-completion', approxSize: '~7.5GB', license: 'Apache-2.0', extra: 'Razona sobre texto/OCR/candidato; MedPsy-4B ancla entidades. La modalidad de la foto la mantiene VisionPsy (🟢).' },
     ],
   },
 ];

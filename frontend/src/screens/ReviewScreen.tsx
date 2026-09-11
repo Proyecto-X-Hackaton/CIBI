@@ -13,12 +13,12 @@ import { Icon } from '../components/Icon';
 import { useApp } from '../state/AppState';
 import { useStrings } from '../i18n/useStrings';
 import { getMessages, getPhotos, saveObservation, updateInspection, saveReportVersion, listInspections, getLatestObservation } from '../db/database';
-import { structureEntities, type StructuredReport } from '../qvac/structure';
+import { structureEntitiesWithRoute, type StructuredReport } from '../qvac/structure';
 import { findDuplicates, keywordSimilarity } from '../qvac/dedupRag';
 import { upgradeConfidence } from '../utils/confidence';
 
 export default function ReviewScreen({ inspectionId }: { inspectionId: string }) {
-  const { setWizard, setDetailsOpen, tier, refreshPendings } = useApp();
+  const { setWizard, setDetailsOpen, tier, peerBase, refreshPendings } = useApp();
   const t = useStrings();
   const { theme: th } = useTheme();
   const s = useThemedStyles(makeStyles);
@@ -29,6 +29,9 @@ export default function ReviewScreen({ inspectionId }: { inspectionId: string })
   const [followups, setFollowups] = useState<string[]>([]);
   const [followIdx, setFollowIdx] = useState(0);
   const [answer, setAnswer] = useState('');
+  const [routeMode, setRouteMode] = useState<'offline' | 'peer'>(tier === 'CIBI' ? 'offline' : 'peer');
+  const [peerId, setPeerId] = useState<string | null>(null);
+  const [fallbackReason, setFallbackReason] = useState<string | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -39,7 +42,11 @@ export default function ReviewScreen({ inspectionId }: { inspectionId: string })
         const lastPhoto = photos[photos.length - 1];
         const ocrHint = lastPhoto ? JSON.parse(lastPhoto.ocr_json ?? '[]').map((b: any) => b.text).join(' ') : null;
         const visionHint = lastPhoto ? String(JSON.parse(lastPhoto.vision_json ?? '{}').modality_guess ?? '') : null;
-        const structured = await structureEntities({ text_en: enAll, visionHint, ocrHint });
+        const structuredResult = await structureEntitiesWithRoute({ text_en: enAll, visionHint, ocrHint, tier, peerBase });
+        const structured = structuredResult.report;
+        setRouteMode(structuredResult.route.mode);
+        setPeerId(structuredResult.route.peer_id);
+        setFallbackReason(structuredResult.route.fallback_reason);
         if (!enAll.trim()) {
           setReport({ customer: null, city: null, country: null, items: [], confidence_map: {} });
           setBusy(null);
@@ -63,6 +70,8 @@ export default function ReviewScreen({ inspectionId }: { inspectionId: string })
           siteWorkspace: `site-${inspectionId.slice(0, 8)}`,
           newItemLabel: firstLabel,
           existingLabels,
+          tier,
+          peerBase,
         }).catch(() => ({ candidates: [] as any[], method: 'keyword' as const }));
         if (candidates[0]) setDup(candidates[0]);
         // Follow-ups: most valuable missing field (maker > age > qty), max 2.
@@ -93,7 +102,7 @@ export default function ReviewScreen({ inspectionId }: { inspectionId: string })
     if (!report) return;
     setBusy('Guardando…');
     await saveObservation(inspectionId, { ...report, synthetic: true }, report.confidence_map, tier,
-      { tier, mode: 'offline', peer_id: null, fallback_reason: null, synthetic: true });
+      { tier, mode: routeMode, peer_id: peerId, fallback_reason: fallbackReason, synthetic: true });
     const first = report.items[0];
     await updateInspection(inspectionId, {
       customer: report.customer ?? undefined,
@@ -101,7 +110,7 @@ export default function ReviewScreen({ inspectionId }: { inspectionId: string })
       country: report.country ?? undefined,
       status: 'PENDING',
     }).catch(() => {});
-    await saveReportVersion(inspectionId, tier, { ...report, synthetic: true }, { tier, mode: 'offline', peer_id: null, synthetic: true });
+    await saveReportVersion(inspectionId, tier, { ...report, synthetic: true }, { tier, mode: routeMode, peer_id: peerId, fallback_reason: fallbackReason, synthetic: true });
     refreshPendings();
     setBusy(null);
     setWizard({ name: 'report', inspectionId });
@@ -110,7 +119,7 @@ export default function ReviewScreen({ inspectionId }: { inspectionId: string })
   return (
     <ScrollView style={s.wrap} contentContainerStyle={{ gap: 14, paddingBottom: 24 + insets.bottom }}>
       <WizardHeader title={t.wizardStep2} onBack={() => setWizard({ name: 'chat', inspectionId })} />
-      <Text style={s.sub}>{tier} · del chat · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>detalles</Text></Text>
+      <Text style={s.sub}>{tier} · {routeMode === 'peer' ? 'peer QVAC local' : 'en tu teléfono'} · del chat · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>detalles</Text></Text>
       {busy ? <View style={s.card}><ActivityIndicator color={th.green} /><Text style={s.sub}>{busy}</Text></View> : null}
       {report ? (
         <View style={s.card}>

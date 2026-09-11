@@ -1,6 +1,6 @@
 // ReportScreen — SCREEN_03 + F06: versioned report + offline PDF + share.
 // Render from local SQLite (works in airplane mode). Re-generate creates
-// v+1 with chosen tier (P0: 🟢 only; 🔵/🟣 locked P1). PDF via expo-print
+// v+1 with chosen tier (CIBI on-device or Pro/Super via LAN QVAC). PDF via expo-print
 // local HTML template → expo-sharing sheet. Zero inference on export.
 
 import React, { useEffect, useState } from 'react';
@@ -16,11 +16,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { useApp } from '../state/AppState';
 import { useStrings } from '../i18n/useStrings';
-import { getReportVersions, getInspection, saveReportVersion } from '../db/database';
-import { TIER_ROSTER } from '../qvac/TIER_ROSTER';
+import { getReportVersions, getInspection, getMessages, saveReportVersion } from '../db/database';
+import { TIER_ROSTER, type TierId } from '../qvac/TIER_ROSTER';
+import { structureEntitiesWithRoute } from '../qvac/structure';
 
 export default function ReportScreen({ inspectionId }: { inspectionId: string }) {
-  const { setWizard, setDetailsOpen, tier, setTier } = useApp();
+  const { setWizard, setDetailsOpen, tier, selectTier, peerBase } = useApp();
   const t = useStrings();
   const { theme: th } = useTheme();
   const s = useThemedStyles(makeStyles);
@@ -28,9 +29,16 @@ export default function ReportScreen({ inspectionId }: { inspectionId: string })
   const [versions, setVersions] = useState<any[]>([]);
   const [customer, setCustomer] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [lastMode, setLastMode] = useState<'offline' | 'peer'>(tier === 'CIBI' ? 'offline' : 'peer');
 
   const reload = async () => {
-    setVersions(await getReportVersions(inspectionId));
+    const nextVersions = await getReportVersions(inspectionId);
+    setVersions(nextVersions);
+    const latestVersion = nextVersions[nextVersions.length - 1];
+    try {
+      const provenance = latestVersion?.provenance ? JSON.parse(latestVersion.provenance) : null;
+      if (provenance?.mode === 'peer' || provenance?.mode === 'offline') setLastMode(provenance.mode);
+    } catch {}
     const ins = await getInspection(inspectionId);
     if (ins?.customer) setCustomer(ins.customer);
   };
@@ -39,15 +47,31 @@ export default function ReportScreen({ inspectionId }: { inspectionId: string })
   const latest = versions[versions.length - 1];
   const latestJson = latest ? JSON.parse(latest.json) : null;
 
+  const chooseTier = async (next: TierId) => {
+    if (next === tier || busy) return;
+    const ok = await selectTier(next);
+    if (!ok) Alert.alert('Peer QVAC no disponible', `No se pudo verificar ${peerBase}. Se mantiene ${tier}. Revisa Ajustes → Peer QVAC.`);
+  };
+
   const regen = async () => {
-    if (tier !== 'CIBI') {
-      Alert.alert('Peer bloqueado (P1)', 'Pro/Super necesitan un peer QVAC verificado. El informe CIBI del teléfono es el flujo juzgado.');
-      return;
-    }
     setBusy(true);
-    await saveReportVersion(inspectionId, tier, { ...(latestJson ?? {}), regenerated: true, synthetic: true }, { tier, mode: 'offline', peer_id: null, synthetic: true });
-    await reload();
-    setBusy(false);
+    try {
+      const msgs = await getMessages(inspectionId).catch(() => []);
+      const source = msgs.filter((m) => m.text_en).map((m) => m.text_en as string).join('\n') || msgs.map((m) => m.text_original).join('\n') || JSON.stringify(latestJson ?? { items: [] });
+      const result = await structureEntitiesWithRoute({ text_en: source, tier, peerBase });
+      setLastMode(result.route.mode);
+      await saveReportVersion(
+        inspectionId,
+        tier,
+        { ...result.report, regenerated: true, synthetic: true },
+        { tier, mode: result.route.mode, peer_id: result.route.peer_id, fallback_reason: result.route.fallback_reason, synthetic: true },
+      );
+      await reload();
+    } catch (error: any) {
+      Alert.alert('Informe', `No se pudo regenerar: ${String(error?.message ?? error).slice(0, 180)}`);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const exportPdf = async () => {
@@ -75,17 +99,17 @@ export default function ReportScreen({ inspectionId }: { inspectionId: string })
   return (
     <ScrollView style={s.wrap} contentContainerStyle={{ gap: 14, paddingBottom: 24 + insets.bottom }}>
       <WizardHeader title={customer ? `${t.wizardReport} · ${customer}` : t.wizardReport} onBack={() => setWizard({ name: 'review', inspectionId })} />
-      <Text style={s.sub}>Reporte v{latest?.version ?? '—'} · {tier} · inspección editable siempre · {t.synthetic}</Text>
+      <Text style={s.sub}>Reporte v{latest?.version ?? '—'} · {tier} · {lastMode === 'peer' ? 'peer QVAC local' : 'en tu teléfono'} · inspección editable siempre · {t.synthetic}</Text>
       <View style={s.card}>
         <Text style={s.h3}>Generar con</Text>
         <View style={s.tierbar}>
           {TIER_ROSTER.map((tt) => (
-            <TouchableOpacity key={tt.id} style={[s.tier, tier === tt.id && s.tierOn]} onPress={() => (tt.id === 'CIBI' ? setTier(tt.id) : Alert.alert('Bloqueado', `${tt.label} necesita peer QVAC verificado (P1).`))}>
-              <Text style={s.tierText}>{tt.label}{tt.id !== 'CIBI' ? ' · locked' : ''}</Text>
+            <TouchableOpacity key={tt.id} style={[s.tier, tier === tt.id && s.tierOn]} onPress={() => chooseTier(tt.id)} disabled={busy}>
+              <Text style={s.tierText}>{tt.label}{tt.where === 'peer' ? ' · LAN' : ''}</Text>
             </TouchableOpacity>
           ))}
         </View>
-        <Text style={s.sub}>Preselección {tier} · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>detalles</Text></Text>
+        <Text style={s.sub}>Selección actual: {tier} · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>detalles</Text></Text>
       </View>
       <View style={s.card}>
         <Text style={s.h3}>Parque instalado (informe v{latest?.version ?? '—'})</Text>
