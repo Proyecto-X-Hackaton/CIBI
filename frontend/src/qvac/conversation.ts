@@ -43,18 +43,17 @@ function factsLine(report: StructuredReport | null): string {
   return `Inventario hasta ahora: ${parts.join(' / ')}.`;
 }
 
-export async function generateAssistantReply(opts: {
+export interface DialogueInput {
   turns: DialogueTurn[];
   latestUserEn: string;
   latestUserOriginal: string;
   untranslated: boolean;
   structured: StructuredReport | null;
-  structuredMethod: string;
   photoSummary?: string | null;
   catalogHint?: string | null;
-  modelError?: string | null;
-  onProgress?: (pct: number | null, stage: string) => void;
-}): Promise<{ reply: string; method: string }> {
+}
+
+export function buildDialogueHistory(opts: DialogueInput): Array<{ role: 'user'; content: string }> {
   const historyText = opts.turns
     .slice(-8)
     .map((t) => `${t.role === 'user' ? 'Persona' : 'CIBI'}: ${t.text}${t.photoSummary ? ` [foto: ${t.photoSummary}]` : ''}`)
@@ -69,7 +68,41 @@ export async function generateAssistantReply(opts: {
     `Último mensaje de la persona (EN interno): ${opts.latestUserEn}\n` +
     `Último mensaje original: ${opts.latestUserOriginal}\n\n` +
     'Responde en español, conversacional, sin JSON.';
+  return [{ role: 'user', content: userContent }];
+}
 
+/** Validate + clean a dialogue output. Throws on empty/gate hit. */
+export function parseDialogueText(text: string): string {
+  const clean = text.trim();
+  if (!clean) throw new Error('empty dialogue');
+  if (containsBannedClinicalClaim(clean)) throw new Error('clinical-claim-gate');
+  return clean;
+}
+
+/** Honest contextual fallback reply (no model needed). */
+export function fallbackDialogueReply(opts: DialogueInput & { structuredMethod: string; modelError?: string | null }): string {
+  const items = opts.structured?.items ?? [];
+  const missingMaker = items.some((i) => !i.manufacturer);
+  const missingAge = items.some((i) => i.age_years == null);
+  const q = opts.photoSummary
+    ? `Sobre la foto que me mostraste (${opts.photoSummary.slice(0, 120)}): ¿confirmas el fabricante y modelo de la placa?`
+    : missingMaker
+      ? '¿De qué fabricante son los equipos que me describes?'
+      : missingAge
+        ? '¿Recuerdas hace cuántos años se instalaron, aunque sea aproximado?'
+        : '¿La cantidad que me diste es exacta o estimada?';
+  const prefix =
+    opts.structuredMethod === 'regex-fallback'
+      ? `Anoté tu reporte localmente (${shortReason(opts.modelError)}). `
+      : 'Anoté tu reporte. ';
+  return `${prefix}${q}`;
+}
+
+export async function generateAssistantReply(opts: DialogueInput & {
+  structuredMethod: string;
+  modelError?: string | null;
+  onProgress?: (pct: number | null, stage: string) => void;
+}): Promise<{ reply: string; method: string }> {
   try {
     const { text } = await runCompletion({
       tier: 'CIBI',
@@ -77,33 +110,17 @@ export async function generateAssistantReply(opts: {
       modelName: 'HEALTHCARE_1_7B_MEDICAL_Q4_K_M',
       quant: 'Q4_K_M',
       engine: 'llamacpp-completion',
-      modelConfig: { ctx_size: 2048 },
+      modelConfig: { ctx_size: 2048, gpu_layers: 0, load_mode: 'mmap' },
       ctx_size: 2048,
-      history: [{ role: 'user', content: userContent }],
+      predict: 220,
+      history: buildDialogueHistory(opts),
       onProgress: opts.onProgress,
     });
-    const clean = text.trim();
-    if (!clean) throw new Error('empty dialogue');
-    if (containsBannedClinicalClaim(clean)) throw new Error('clinical-claim-gate');
-    return { reply: clean, method: 'MedPsy-1.7B Q4_K_M' };
+    return { reply: parseDialogueText(text), method: 'MedPsy-1.7B Q4_K_M' };
   } catch (e: any) {
     // Honest contextual fallback: references what we DO know, asks the
     // single most valuable question. Never the old fixed template.
-    const items = opts.structured?.items ?? [];
-    const missingMaker = items.some((i) => !i.manufacturer);
-    const missingAge = items.some((i) => i.age_years == null);
-    const q = opts.photoSummary
-      ? `Sobre la foto que me mostraste (${opts.photoSummary.slice(0, 120)}): ¿confirmas el fabricante y modelo de la placa?`
-      : missingMaker
-        ? '¿De qué fabricante son los equipos que me describes?'
-        : missingAge
-          ? '¿Recuerdas hace cuántos años se instalaron, aunque sea aproximado?'
-          : '¿La cantidad que me diste es exacta o estimada?';
-    const prefix =
-      opts.structuredMethod === 'regex-fallback'
-        ? `Anoté tu reporte localmente (${shortReason(opts.modelError)}). `
-        : 'Anoté tu reporte. ';
-    return { reply: `${prefix}${q}`, method: opts.structuredMethod };
+    return { reply: fallbackDialogueReply({ ...opts, modelError: String(e?.message ?? e) }), method: opts.structuredMethod };
   }
 }
 

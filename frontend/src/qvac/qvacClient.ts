@@ -38,7 +38,7 @@ import type { TierId } from './TIER_ROSTER';
 // ---- one-model-at-a-time mutex ----
 let queue: Promise<void> = Promise.resolve();
 
-function serialized<T>(fn: () => Promise<T>): Promise<T> {
+export function serialized<T>(fn: () => Promise<T>): Promise<T> {
   const run = queue.then(fn, fn);
   queue = run.then(() => undefined, () => undefined);
   return run;
@@ -53,7 +53,7 @@ function timed<T>(fn: () => Promise<T>): Promise<{ value: T; ms: number }> {
   return fn().then((value) => ({ value, ms: Date.now() - t0 }));
 }
 
-async function safeUnload(modelId: string | null): Promise<void> {
+export async function safeUnload(modelId: string | null): Promise<void> {
   if (!modelId) return;
   try {
     await unloadModel({ modelId, clearStorage: false });
@@ -63,7 +63,7 @@ async function safeUnload(modelId: string | null): Promise<void> {
 }
 
 // ---- text extraction compatible with both SDK surfaces ----
-async function collectCompletion(run: any): Promise<{ text: string; stats: any }> {
+export async function collectCompletion(run: any): Promise<{ text: string; stats: any }> {
   let text = '';
   try {
     if (run && run.tokenStream) {
@@ -194,7 +194,7 @@ export async function acquireModel(opts: {
   }
 }
 
-function statsToSpan(stats: any): { tokens_in: number; tokens_out: number; ttft_ms: number | null; throughput_tps: number | null } {
+export function statsToSpan(stats: any): { tokens_in: number; tokens_out: number; ttft_ms: number | null; throughput_tps: number | null } {
   if (!stats) return { tokens_in: 0, tokens_out: 0, ttft_ms: null, throughput_tps: null };
   return {
     tokens_in: Number(stats.tokensIn ?? stats.promptTokens ?? stats.inputTokens ?? stats.cacheTokens ?? 0) || 0,
@@ -215,6 +215,8 @@ export async function runCompletion(opts: {
   ctx_size?: number | null;
   image_no_upscale?: string | null;
   history: Array<{ role: 'user' | 'assistant'; content: string; attachments?: Array<{ path: string }> }>;
+  /** Max tokens to generate. Caps runaway outputs on slow phones. */
+  predict?: number;
   onProgress?: ProgressCb;
 }): Promise<{ text: string; load_ms: number }> {
   return serialized(async () => {
@@ -225,7 +227,12 @@ export async function runCompletion(opts: {
       modelId = h.modelId;
       opts.onProgress?.(null, 'infer');
       const t0 = Date.now();
-      const run: any = completion({ modelId, history: opts.history as any, stream: true });
+      const run: any = completion({
+        modelId,
+        history: opts.history as any,
+        stream: true,
+        ...(opts.predict != null ? { generationParams: { predict: opts.predict } } : {}),
+      });
       const ttftTimer = Date.now();
       void ttftTimer;
       const { text, stats } = await collectCompletion(run);

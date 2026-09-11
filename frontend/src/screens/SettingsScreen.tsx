@@ -17,6 +17,8 @@ import { pushOutbox, checkHealth } from '../api/backend';
 import { downloadAsset, heartbeat, BERGAMOT_ES_EN, BERGAMOT_PT_EN, VISIONPSY_NANO_460M_MULTIMODAL_Q8_0, MMPROJ_VISIONPSY_NANO_460M_MULTIMODAL_Q8_0, OCR_LATIN, PARAKEET_TDT_0_6B_V3_Q8_0, HEALTHCARE_1_7B_MEDICAL_Q4_K_M } from '@qvac/sdk';
 import * as FileSystem from 'expo-file-system';
 import * as Clipboard from 'expo-clipboard';
+import * as Device from 'expo-device';
+import { fetchModelStatuses, testChat, fmtBytes, type ModelStatus } from '../qvac/modelStatus';
 
 export default function SettingsScreen() {
   const { tier, setTier, uiLang, setUiLang, backendBase, setBackendBase, setDetailsOpen, refreshPendings } = useApp();
@@ -29,6 +31,10 @@ export default function SettingsScreen() {
   const [perfDump, setPerfDump] = useState<string | null>(null);
   const [dlBusy, setDlBusy] = useState(false);
   const [dlMsg, setDlMsg] = useState<string | null>(null);
+  const [statuses, setStatuses] = useState<ModelStatus[]>([]);
+  const [stBusy, setStBusy] = useState(false);
+  const [testBusy, setTestBusy] = useState(false);
+  const [testMsg, setTestMsg] = useState<string | null>(null);
   const spans = recentSpans(6);
 
   const sync = async () => {
@@ -100,8 +106,49 @@ export default function SettingsScreen() {
         <Text style={s.sub}>Sin peer verificado siguen bloqueados. Peer = proceso QVAC aparte, NO el backend Django. Foto/audio crudos se quedan en el teléfono salvo permiso explícito.</Text>
       </View>
       <View style={s.card}>
-        <Text style={s.h3}>Modelos on-device (primera vez con WiFi)</Text>
-        <Text style={s.sub}>La primera carga descarga ~2.7GB (MedPsy 1.28GB + Visión 546MB + voz 750MB + traductores). Hazlo una vez con WiFi; después todo funciona en avión.</Text>
+        <Text style={s.h3}>Modelos on-device · estado</Text>
+        <Text style={s.sub}>La primera carga descarga ~3.4GB una vez con WiFi; después todo funciona en avión. Reinstalar la app borra los modelos.</Text>
+        <Text style={s.sub}>Teléfono: {Device.modelName ?? '?'} · {Device.totalMemory ? `${(Device.totalMemory / 1e9).toFixed(1)}GB RAM` : 'RAM desconocida'} · CPU-forzado (sin GPU).</Text>
+        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+          <TouchableOpacity
+            style={[s.btn, { flex: 1 }]}
+            disabled={stBusy}
+            onPress={async () => {
+              setStBusy(true);
+              setStatuses(await fetchModelStatuses());
+              setStBusy(false);
+            }}
+            accessibilityRole="button"
+          >
+            {stBusy ? <ActivityIndicator color={ON_DARK} /> : <Text style={s.btnText}>Ver estado</Text>}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[s.btn, s.ghost, { flex: 1, marginTop: 0 }]}
+            disabled={testBusy}
+            onPress={async () => {
+              setTestBusy(true);
+              setTestMsg('Probando MedPsy…');
+              const r = await testChat();
+              setTestMsg(r.ok ? `MedPsy responde (${r.ms}ms): "${r.text}"` : `MedPsy NO responde (${r.ms}ms): ${r.error}`);
+              setTestBusy(false);
+            }}
+            accessibilityRole="button"
+          >
+            {testBusy ? <ActivityIndicator color={th.green} /> : <Text style={[s.btnText, { color: th.text }]}>Probar chat</Text>}
+          </TouchableOpacity>
+        </View>
+        {testMsg ? <Text style={[s.sub, { marginTop: 8 }]} selectable>{testMsg}</Text> : null}
+        {statuses.map((m) => (
+          <View key={m.key} style={s.mrow}>
+            <Text style={s.mdot}>{m.error ? '⚠️' : m.isCached ? '●' : '○'}</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.mlabel}>{m.label}{m.isLoaded ? ' · en memoria' : ''}</Text>
+              <Text style={s.sub}>
+                {m.error ? m.error : m.isCached == null ? 'sin datos' : m.isCached ? `descargado · ${fmtBytes(m.actualBytes ?? m.expectedBytes)}` : `falta · esperado ${m.approxSize}`}
+              </Text>
+            </View>
+          </View>
+        ))}
         <TouchableOpacity
           style={[s.btn, { marginTop: 8 }]}
           disabled={dlBusy}
@@ -139,23 +186,29 @@ export default function SettingsScreen() {
             }
             setDlMsg(failed.length === 0 ? 'Listo: modelos en el teléfono.' : `Falló: ${failed.join(', ')} — reintenta con WiFi.`);
             setDlBusy(false);
+            setStatuses(await fetchModelStatuses());
           }}
           accessibilityRole="button"
         >
           {dlBusy ? <ActivityIndicator color={ON_DARK} /> : <Text style={s.btnText}>Descargar modelos</Text>}
         </TouchableOpacity>
-        {dlMsg ? (
+        {dlMsg || testMsg ? (
           <View style={{ marginTop: 8, gap: 6 }}>
-            <Text style={s.sub} selectable>{dlMsg}</Text>
+            {dlMsg ? <Text style={s.sub} selectable>{dlMsg}</Text> : null}
             <TouchableOpacity
               style={[s.btn, s.ghost, { marginTop: 0, minHeight: 44 }]}
               onPress={async () => {
-                await Clipboard.setStringAsync(dlMsg);
-                Alert.alert('Copiado', 'Error copiado al portapapeles.');
+                const lines = [
+                  `diag: ${dlMsg ?? '—'}`,
+                  `test: ${testMsg ?? '—'}`,
+                  ...statuses.map((m) => `${m.key}: cached=${m.isCached} loaded=${m.isLoaded} size=${fmtBytes(m.actualBytes ?? m.expectedBytes)}${m.error ? ` err=${m.error}` : ''}`),
+                ];
+                await Clipboard.setStringAsync(lines.join('\n'));
+                Alert.alert('Copiado', 'Diagnóstico copiado al portapapeles.');
               }}
               accessibilityRole="button"
             >
-              <Text style={[s.btnText, { color: th.text }]}>Copiar error</Text>
+              <Text style={[s.btnText, { color: th.text }]}>Copiar diagnóstico</Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -194,6 +247,9 @@ const makeStyles = (t: ThemeTokens) => StyleSheet.create({
   segOn: { backgroundColor: t.green },
   segT: { color: t.muted, textAlign: 'center', fontWeight: '700' },
   segOnT: { color: t.onAccent, textAlign: 'center', fontWeight: '700' },
+  mrow: { flexDirection: 'row', gap: 8, paddingVertical: 7, borderTopColor: t.border, borderTopWidth: 1, marginTop: 7 },
+  mdot: { fontSize: 13, color: t.green },
+  mlabel: { color: t.text, fontSize: 13, fontWeight: '700' },
   txt: { backgroundColor: t.bg, color: t.text, borderColor: t.border, borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 14 },
   btn: { backgroundColor: t.blue, borderRadius: 12, minHeight: 48, justifyContent: 'center' },
   ghost: { backgroundColor: t.surface, borderColor: t.border, borderWidth: 1, marginTop: 8 },

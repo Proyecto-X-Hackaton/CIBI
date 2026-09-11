@@ -22,8 +22,8 @@ import { useStrings } from '../i18n/useStrings';
 import { getMessages, appendMessage, savePhotoEvidence, type ChatMsg } from '../db/database';
 import { normalizeToEnglish } from '../qvac/translate';
 import { describePhoto, readLabelText } from '../qvac/visionOcr';
-import { structureEntities, lastStructureError, type StructuredReport } from '../qvac/structure';
-import { generateAssistantReply, type DialogueTurn } from '../qvac/conversation';
+import { answerChatTurn } from '../qvac/turn';
+import type { DialogueTurn } from '../qvac/conversation';
 import { matchCatalog } from '../catalog/catalog';
 import { transcribeAudio } from '../qvac/voice';
 
@@ -102,35 +102,27 @@ export default function ChatCaptureScreen({ inspectionId }: { inspectionId: stri
     baseTurns: DialogueTurn[];
     photoSummary?: string | null;
   }) => {
-    // Hidden structuring pass (feeds ReviewScreen + dialogue facts).
-    setBusy('Anotando equipos…');
-    let struct: StructuredReport | null = null;
-    let structMethod = 'regex-fallback';
-    try {
-      const rep = await structureEntities({
-        text_en: opts.photoSummary ? `${opts.textEn}\nPhoto evidence: ${opts.photoSummary}` : opts.textEn,
-      });
-      struct = rep;
-      structMethod = (rep.confidence_map as any)?.fallback ? 'regex-fallback' : 'MedPsy-1.7B Q4_K_M';
-    } catch {
-      struct = null;
-    }
+    // Catalog hint feeds the dialogue prompt (never shown as a template).
     const match = matchCatalog(opts.textEn);
     const catalogHint = match.entry
       ? `${match.entry.modality} ${match.entry.family}: placa en ${match.entry.point_of_interest[0]}; conviene preguntar: ${match.entry.staff_question[0]}`
       : null;
-    // Visible conversational pass — the actual AI reply.
-    setBusy('Pensando…');
-    const { reply } = await generateAssistantReply({
-      turns: opts.baseTurns,
-      latestUserEn: opts.textEn,
-      latestUserOriginal: opts.userText,
+    // Single MedPsy residency: structure (hidden) + dialogue (visible).
+    setBusy('Anotando y pensando…');
+    const { reply } = await answerChatTurn({
+      textEn: opts.textEn,
+      userText: opts.userText,
+      lang: opts.lang,
       untranslated: opts.untranslated,
-      structured: struct,
-      structuredMethod: structMethod,
+      baseTurns: opts.baseTurns,
       photoSummary: opts.photoSummary ?? null,
       catalogHint,
-      modelError: lastStructureError(),
+      onProgress: (_pct, stage) => {
+        if (stage === 'download') setBusy('Descargando modelo…');
+        else if (stage === 'load') setBusy('Cargando MedPsy…');
+        else if (stage === 'structure') setBusy('Anotando equipos…');
+        else if (stage === 'dialogue') setBusy('Pensando…');
+      },
     });
     await push({ role: 'assistant', text_original: reply, lang: opts.lang, text_en: null });
   };

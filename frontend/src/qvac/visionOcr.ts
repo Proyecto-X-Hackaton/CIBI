@@ -46,6 +46,8 @@ export async function describePhoto(opts: {
         ctx_size: 1024,
         projectionModelSrc: MMPROJ_VISIONPSY_NANO_460M_MULTIMODAL_Q8_0,
         image_no_upscale: 'on',
+        gpu_layers: 0,
+        load_mode: 'mmap',
       },
       ctx_size: 1024,
       image_no_upscale: 'on',

@@ -50,17 +50,42 @@ export function lastStructureError(): string | null {
   return lastError;
 }
 
+export type CompletionHistory = Array<{ role: 'user' | 'assistant'; content: string }>;
+
+export function buildStructureHistory(opts: {
+  text_en: string;
+  visionHint?: string | null;
+  ocrHint?: string | null;
+}): CompletionHistory {
+  const userContent =
+    `EN observation: ${opts.text_en}\n` +
+    (opts.visionHint ? `Vision hint (modality/scene): ${opts.visionHint}\n` : '') +
+    (opts.ocrHint ? `OCR label text (wins for model/serial): ${opts.ocrHint}\n` : '') +
+    'Return ONLY the JSON object.';
+  // Single user turn: some chat templates fail on consecutive same-role
+  // messages, so system + observation go in one prompt.
+  return [{ role: 'user', content: `${SYSTEM_PROMPT}\n\n${userContent}` }];
+}
+
+/** Parse model output into a report. Throws on gate hit or bad JSON. */
+export function parseStructureText(text: string): StructuredReport {
+  if (containsBannedClinicalClaim(text)) throw new Error('clinical-claim-gate');
+  const report = coerceReport(repairJson(text));
+  if (containsBannedClinicalClaim(JSON.stringify(report))) throw new Error('clinical-claim-gate');
+  return report;
+}
+
+/** Deterministic regex fallback — never invents maker/model (→ null/Unknown). */
+export function structureFallback(text_en: string, visionHint?: string | null, ocrHint?: string | null): StructuredReport {
+  return regexFallback(text_en, visionHint, ocrHint);
+}
+
 export async function structureEntities(opts: {
   text_en: string;
   visionHint?: string | null;
   ocrHint?: string | null;
   onProgress?: (pct: number | null, stage: string) => void;
 }): Promise<StructuredReport> {
-  const userContent =
-    `EN observation: ${opts.text_en}\n` +
-    (opts.visionHint ? `Vision hint (modality/scene): ${opts.visionHint}\n` : '') +
-    (opts.ocrHint ? `OCR label text (wins for model/serial): ${opts.ocrHint}\n` : '') +
-    'Return ONLY the JSON object.';
   try {
     lastError = null;
     const { text } = await runCompletion({
@@ -69,18 +94,13 @@ export async function structureEntities(opts: {
       modelName: 'HEALTHCARE_1_7B_MEDICAL_Q4_K_M',
       quant: 'Q4_K_M',
       engine: 'llamacpp-completion',
-      modelConfig: { ctx_size: 2048 },
-      ctx_size: 2048,
-      history: [
-        { role: 'user', content: SYSTEM_PROMPT },
-        { role: 'user', content: userContent },
-      ],
+      modelConfig: { ctx_size: 1024, gpu_layers: 0, load_mode: 'mmap' },
+      ctx_size: 1024,
+      predict: 256,
+      history: buildStructureHistory(opts),
       onProgress: opts.onProgress,
     });
-    if (containsBannedClinicalClaim(text)) throw new Error('clinical-claim-gate');
-    const report = coerceReport(repairJson(text));
-    if (containsBannedClinicalClaim(JSON.stringify(report))) throw new Error('clinical-claim-gate');
-    return report;
+    return parseStructureText(text);
   } catch (e: any) {
     // Fallback (TECH_STACK §4): VisionPsy+regex structuring, disclose downgrade.
     lastError = String(e?.message ?? e ?? 'load-failed');
