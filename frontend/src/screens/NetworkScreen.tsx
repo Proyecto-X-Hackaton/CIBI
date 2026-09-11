@@ -5,7 +5,11 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert } from 'react-native';
-import { C, Disclaimer } from '../components/atoms';
+import { Disclaimer } from '../components/atoms';
+import { useTheme } from '../../theme/ThemeContext';
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import type { ThemeTokens } from '../../theme/tokens';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { useApp } from '../state/AppState';
 import { SEED_SITES } from '../db/seed';
@@ -28,6 +32,9 @@ interface SiteRow {
 
 export default function NetworkScreen() {
   const { setTab, refreshPendings } = useApp();
+  const { theme: th } = useTheme();
+  const s = useThemedStyles(makeStyles);
+  const insets = useSafeAreaInsets();
   const [q, setQ] = useState('');
   const [chip, setChip] = useState<string>('MR >7 años en Brasil');
   const [scheduled, setScheduled] = useState(false);
@@ -97,13 +104,13 @@ export default function NetworkScreen() {
   };
 
   return (
-    <ScrollView style={s.wrap} contentContainerStyle={{ gap: 14, paddingBottom: 24 }}>
+    <ScrollView style={s.wrap} contentContainerStyle={{ gap: 14, paddingBottom: 24 + insets.bottom }}>
       <Text style={s.h1}>Hoy en São Paulo</Text>
       <Text style={s.sub}>A dónde ir · qué decir · 100% offline</Text>
       <Text style={s.sect}>F08 · Próxima acción</Text>
       {hero ? (
         <View style={s.hero}>
-          <View style={s.heroRow}><Icon name="idea" size={16} color="#FBBF24" /><Text style={s.heroText}><Text style={{ fontWeight: '800', color: '#FBBF24' }}>Mañana: {hero.name}</Text>{'\n'}{hero.aging || 'Seguimiento'} → ofrecer renovación a ingeniería clínica.{'\n'}<Text style={s.meta}>{hero.city} · hace {hero.last_visit_days}d · datos sintéticos</Text></Text></View>
+          <View style={s.heroRow}><Icon name="idea" size={16} color={th.amber} /><Text style={s.heroText}><Text style={{ fontWeight: '800', color: th.amber }}>Mañana: {hero.name}</Text>{'\n'}{hero.aging || 'Seguimiento'} → ofrecer renovación a ingeniería clínica.{'\n'}<Text style={s.meta}>{hero.city} · hace {hero.last_visit_days}d · datos sintéticos</Text></Text></View>
           <View style={s.btnrow}>
             <TouchableOpacity style={[s.btn, s.primary]} onPress={() => setTab('home')} accessibilityRole="button"><Text style={s.btnP}>Ver informe</Text></TouchableOpacity>
             <TouchableOpacity style={[s.btn, s.ghost]} onPress={schedule} accessibilityRole="button"><Text style={s.btnG}>{scheduled ? 'Agendada · mañana' : 'Agendar'}</Text></TouchableOpacity>
@@ -115,16 +122,16 @@ export default function NetworkScreen() {
       )}
       <Text style={s.sect}>F07 · Mis sedes</Text>
       <View style={s.card}>
-        <View style={s.hRow}><Icon name="search" size={14} color={C.muted} /><Text style={s.h3}>Buscar sede (lista offline)</Text></View>
-        <TextInput style={s.search} value={q} onChangeText={setQ} placeholder="Ciudad, hospital…" placeholderTextColor="#6E6E78" />
+        <View style={s.hRow}><Icon name="search" size={14} color={th.muted} /><Text style={s.h3}>Buscar sede (lista offline)</Text></View>
+        <TextInput style={s.search} value={q} onChangeText={setQ} placeholder="Ciudad, hospital…" placeholderTextColor={th.muted} />
         <Text style={s.group}>Sedes ({sites.length})</Text>
         {sites.map((x) => (
           <View key={x.site_id} style={s.row}>
             <View style={{ flex: 1 }}>
-              <View style={s.hRow}><Icon name="hospital" size={14} color={C.text} /><Text style={s.fac}>{x.name}</Text></View>
+              <View style={s.hRow}><Icon name="hospital" size={14} color={th.text} /><Text style={s.fac}>{x.name}</Text></View>
               <Text style={s.meta}>{x.aging || 'Sin alertas'} · {x.counts.MR} MR / {x.counts.CT} CT / {x.counts.US} US · hace {x.last_visit_days}d</Text>
             </View>
-            <TouchableOpacity onPress={() => setTab('home')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Icon name="next" size={18} color={C.green} /></TouchableOpacity>
+            <TouchableOpacity onPress={() => setTab('home')} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Icon name="next" size={18} color={th.green} /></TouchableOpacity>
           </View>
         ))}
         {sites.length === 0 && rows.length > 0 && <Text style={s.meta}>Sin resultados con ese filtro.</Text>}
@@ -143,7 +150,7 @@ export default function NetworkScreen() {
         <View style={s.chips}>
           {NL_CHIPS.map((c) => (
             <TouchableOpacity key={c} style={[s.chip, chip === c && s.chipOn]} onPress={() => setChip(c)} hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}>
-              <Text style={[s.chipText, chip === c && { color: C.green }]}>{c}</Text>
+              <Text style={[s.chipText, chip === c && { color: th.green }]}>{c}</Text>
             </TouchableOpacity>
           ))}
         </View>
@@ -156,31 +163,31 @@ export default function NetworkScreen() {
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (t: ThemeTokens) => StyleSheet.create({
   wrap: { flex: 1, padding: 16 },
-  h1: { color: C.text, fontSize: 22, fontWeight: '800' },
-  sub: { color: C.muted, fontSize: 13 },
-  sect: { color: C.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 },
+  h1: { color: t.text, fontSize: 22, fontWeight: '800' },
+  sub: { color: t.muted, fontSize: 13 },
+  sect: { color: t.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7 },
   hero: { backgroundColor: 'rgba(245,158,11,.10)', borderColor: 'rgba(245,158,11,.5)', borderWidth: 1, borderRadius: 16, padding: 16 },
   heroRow: { flexDirection: 'row', gap: 8, alignItems: 'flex-start' },
-  heroText: { color: C.text, fontSize: 13, lineHeight: 20, flex: 1 },
-  meta: { color: C.muted, fontSize: 12 },
+  heroText: { color: t.text, fontSize: 13, lineHeight: 20, flex: 1 },
+  meta: { color: t.muted, fontSize: 12 },
   btnrow: { flexDirection: 'row', gap: 8, marginVertical: 12 },
   btn: { flex: 1, borderRadius: 10, padding: 11, minHeight: 44, justifyContent: 'center' },
-  primary: { backgroundColor: C.green },
+  primary: { backgroundColor: t.green },
   ghost: { borderColor: 'rgba(34,197,94,.5)', borderWidth: 1 },
-  btnP: { color: '#04120A', fontWeight: '700', textAlign: 'center' },
-  btnG: { color: C.green, fontWeight: '700', textAlign: 'center' },
-  card: { backgroundColor: C.surface, borderColor: C.border, borderWidth: 1, borderRadius: 16, padding: 16 },
-  h3: { color: C.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 12 },
+  btnP: { color: t.onAccent, fontWeight: '700', textAlign: 'center' },
+  btnG: { color: t.green, fontWeight: '700', textAlign: 'center' },
+  card: { backgroundColor: t.surface, borderColor: t.border, borderWidth: 1, borderRadius: 16, padding: 16 },
+  h3: { color: t.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 12 },
   hRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 },
-  search: { backgroundColor: '#0B0B0F', color: '#fff', borderColor: '#3A3A45', borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 14 },
-  group: { color: C.text, fontWeight: '700', marginTop: 12 },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomColor: C.border, borderBottomWidth: 1 },
-  fac: { color: C.text, fontWeight: '700' },
+  search: { backgroundColor: t.bg, color: t.text, borderColor: t.border, borderWidth: 1, borderRadius: 12, padding: 12, fontSize: 14 },
+  group: { color: t.text, fontWeight: '700', marginTop: 12 },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomColor: t.border, borderBottomWidth: 1 },
+  fac: { color: t.text, fontWeight: '700' },
   chips: { flexDirection: 'row', gap: 6, flexWrap: 'wrap', marginBottom: 8 },
-  chip: { borderColor: '#3A3A45', borderWidth: 1, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 11, minHeight: 36, justifyContent: 'center' },
+  chip: { borderColor: t.border, borderWidth: 1, borderRadius: 20, paddingVertical: 7, paddingHorizontal: 11, minHeight: 36, justifyContent: 'center' },
   chipOn: { borderColor: 'rgba(34,197,94,.5)' },
-  chipText: { color: C.muted, fontSize: 12, fontWeight: '600' },
-  result: { color: C.text, fontSize: 13, paddingVertical: 8, borderTopColor: C.border, borderTopWidth: 1 },
+  chipText: { color: t.muted, fontSize: 12, fontWeight: '600' },
+  result: { color: t.text, fontSize: 13, paddingVertical: 8, borderTopColor: t.border, borderTopWidth: 1 },
 });

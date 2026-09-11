@@ -23,10 +23,13 @@ export interface OcrResult {
 }
 
 const VISION_PROMPT =
-  'Identify the medical imaging equipment in this photo and transcribe visible label data as JSON. ' +
-  'Equipment inventory only. Return ONLY strict JSON: ' +
+  'You are an assistant for HOSPITAL EQUIPMENT INVENTORY. Look at this photo of medical imaging equipment. ' +
+  'Describe in one short English sentence what you see (room, machine type, visible labels). ' +
+  'Then on a new line output strict JSON only: ' +
   '{"modality_guess": "MR|CT|US|XR|null", "manufacturer_guess": string|null, "model_guess": string|null, "label_text_free": string|null}. ' +
-  'Unknown → null. No medical advice.';
+  'Modality hints: MR = big doughnut magnet bore; CT = short ring gantry with table; US = small cart with probe and screen; XR = wall stand or C-arm. ' +
+  'Transcribe any visible brand/model/plate text verbatim into label_text_free. ' +
+  'Unknown → null. Equipment inventory only, no medical advice. Format: one sentence, then the JSON object last.';
 
 export async function describePhoto(opts: {
   photoPath: string;
@@ -50,7 +53,11 @@ export async function describePhoto(opts: {
       onProgress: opts.onProgress,
     });
     const parsed = tryParseVisionJson(text);
-    return { ...parsed, raw: text };
+    // Keep any leading prose (the one-sentence description) so the
+    // conversational pass can talk about the photo even when JSON is partial.
+    const prose = text.split('{')[0].trim();
+    const label = parsed.label_text_free || (prose.length > 8 ? prose.slice(0, 300) : null);
+    return { ...parsed, label_text_free: label, raw: text };
   } catch {
     return { modality_guess: null, manufacturer_guess: null, model_guess: null, label_text_free: null, raw: '' };
   }

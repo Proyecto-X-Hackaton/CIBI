@@ -7,7 +7,7 @@ import { runTranscribe } from './qvacClient';
 export async function transcribeAudio(opts: {
   audioPath: string;
   onProgress?: (pct: number | null, stage: string) => void;
-}): Promise<{ text: string; ok: boolean }> {
+}): Promise<{ text: string; ok: boolean; error?: string }> {
   try {
     const { text } = await runTranscribe({
       tier: 'CIBI',
@@ -17,8 +17,10 @@ export async function transcribeAudio(opts: {
       audioPath: opts.audioPath,
       onProgress: opts.onProgress,
     });
-    return { text: text.trim(), ok: text.trim().length > 0 };
-  } catch {
-    return { text: '', ok: false };
+    const clean = text.trim();
+    if (!clean) return { text: '', ok: false, error: 'empty-transcript' };
+    return { text: clean, ok: true };
+  } catch (e: any) {
+    return { text: '', ok: false, error: String(e?.message ?? e ?? 'transcribe-failed') };
   }
 }

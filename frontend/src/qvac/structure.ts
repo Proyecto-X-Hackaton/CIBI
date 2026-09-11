@@ -43,6 +43,13 @@ export function emptyReport(): StructuredReport {
   return { customer: null, city: null, country: null, items: [], confidence_map: {} };
 }
 
+// Last model error, for honest in-chat diagnostics (never shown raw to
+// the user, but mapped to a short human reason).
+let lastError: string | null = null;
+export function lastStructureError(): string | null {
+  return lastError;
+}
+
 export async function structureEntities(opts: {
   text_en: string;
   visionHint?: string | null;
@@ -55,14 +62,15 @@ export async function structureEntities(opts: {
     (opts.ocrHint ? `OCR label text (wins for model/serial): ${opts.ocrHint}\n` : '') +
     'Return ONLY the JSON object.';
   try {
+    lastError = null;
     const { text } = await runCompletion({
       tier: 'CIBI',
       modelConst: HEALTHCARE_1_7B_MEDICAL_Q4_K_M,
       modelName: 'HEALTHCARE_1_7B_MEDICAL_Q4_K_M',
       quant: 'Q4_K_M',
       engine: 'llamacpp-completion',
-      modelConfig: { ctx_size: 4096 },
-      ctx_size: 4096,
+      modelConfig: { ctx_size: 2048 },
+      ctx_size: 2048,
       history: [
         { role: 'user', content: SYSTEM_PROMPT },
         { role: 'user', content: userContent },
@@ -73,8 +81,9 @@ export async function structureEntities(opts: {
     const report = coerceReport(repairJson(text));
     if (containsBannedClinicalClaim(JSON.stringify(report))) throw new Error('clinical-claim-gate');
     return report;
-  } catch {
+  } catch (e: any) {
     // Fallback (TECH_STACK §4): VisionPsy+regex structuring, disclose downgrade.
+    lastError = String(e?.message ?? e ?? 'load-failed');
     return regexFallback(opts.text_en, opts.visionHint, opts.ocrHint);
   }
 }

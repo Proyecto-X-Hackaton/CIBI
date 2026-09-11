@@ -27,7 +27,7 @@ export async function getDb(): Promise<SQLite.SQLiteDatabase> {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       inspection_id TEXT, seq INTEGER,
       role TEXT, text_original TEXT, lang TEXT, text_en TEXT,
-      audio_ref TEXT, created_at TEXT
+      audio_ref TEXT, photo_ref TEXT, created_at TEXT
     );
     CREATE TABLE IF NOT EXISTS photo_evidence (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -61,6 +61,8 @@ export async function getDb(): Promise<SQLite.SQLiteDatabase> {
   `);
   await FileSystem.makeDirectoryAsync(`${mediaDir()}/photos`, { intermediates: true }).catch(() => {});
   await FileSystem.makeDirectoryAsync(`${mediaDir()}/audio`, { intermediates: true }).catch(() => {});
+  // Light migration for DBs created before photo_ref existed.
+  await db.execAsync('ALTER TABLE messages ADD COLUMN photo_ref TEXT').catch(() => {});
   return db;
 }
 
@@ -138,21 +140,21 @@ export async function listInspections(): Promise<Inspection[]> {
 }
 
 // ---- messages (write-through chat history) ----
-export interface ChatMsg { role: 'user' | 'assistant'; text_original: string; lang: string | null; text_en: string | null; }
+export interface ChatMsg { role: 'user' | 'assistant'; text_original: string; lang: string | null; text_en: string | null; photo_ref?: string | null; }
 
 export async function appendMessage(inspectionId: string, msg: ChatMsg): Promise<void> {
   const d = await getDb();
   const row = await d.getFirstAsync('SELECT COUNT(*) as n FROM messages WHERE inspection_id=?', [inspectionId]) as any;
   const seq = Number(row?.n ?? 0) + 1;
-  await d.runAsync('INSERT INTO messages (inspection_id, seq, role, text_original, lang, text_en, created_at) VALUES (?,?,?,?,?,?,?)',
-    [inspectionId, seq, msg.role, msg.text_original, msg.lang, msg.text_en, nowIso()]);
+  await d.runAsync('INSERT INTO messages (inspection_id, seq, role, text_original, lang, text_en, photo_ref, created_at) VALUES (?,?,?,?,?,?,?,?)',
+    [inspectionId, seq, msg.role, msg.text_original, msg.lang, msg.text_en, msg.photo_ref ?? null, nowIso()]);
   await d.runAsync('UPDATE inspections SET updated_at=? WHERE client_uuid=?', [nowIso(), inspectionId]);
 }
 
 export async function getMessages(inspectionId: string): Promise<ChatMsg[]> {
   const d = await getDb();
-  const rows = (await d.getAllAsync('SELECT role, text_original, lang, text_en FROM messages WHERE inspection_id=? ORDER BY seq ASC', [inspectionId])) as any[];
-  return rows.map((r) => ({ role: r.role, text_original: r.text_original, lang: r.lang, text_en: r.text_en }));
+  const rows = (await d.getAllAsync('SELECT role, text_original, lang, text_en, photo_ref FROM messages WHERE inspection_id=? ORDER BY seq ASC', [inspectionId])) as any[];
+  return rows.map((r) => ({ role: r.role, text_original: r.text_original, lang: r.lang, text_en: r.text_en, photo_ref: r.photo_ref ?? null }));
 }
 
 // ---- photo evidence ----

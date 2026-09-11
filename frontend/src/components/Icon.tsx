@@ -6,7 +6,7 @@ import {
   Home, LayoutDashboard, Map as MapIcon, Settings as SettingsIcon,
   Camera, Mic, Send, X, ChevronLeft, ChevronRight, Search,
   Calendar, FileText, RefreshCw, Info, WifiOff, TriangleAlert,
-  Lightbulb, Building2, CircleStop, Check,
+  Lightbulb, Building2, CircleStop, Check, ClipboardCheck,
 } from 'lucide-react-native';
 
 const MAP = {
@@ -31,11 +31,15 @@ const MAP = {
   hospital: Building2,
   stop: CircleStop,
   check: Check,
+  review: ClipboardCheck,
 } as const;
+
+import { useTheme } from '../../theme/ThemeContext';
 
 export type IconName = keyof typeof MAP;
 
-export function Icon({ name, size = 20, color = '#F2F2F5' }: { name: IconName; size?: number; color?: string }) {
+export function Icon({ name, size = 20, color }: { name: IconName; size?: number; color?: string }) {
+  const { theme } = useTheme();
   const Cmp = MAP[name];
-  return <Cmp size={size} color={color} />;
+  return <Cmp size={size} color={color ?? theme.text} />;
 }

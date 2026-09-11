@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "bundleId": "6272da2f77d3a431532360ef7dfd9842d848fa63bb2ca0e960bee1f4dc201813",
+  "bundleId": "c120c24f169135d3c4676d329265651c15678a91ccd317c240267261ef8c5d61",
   "addons": [
     "@qvac/asr-ggml",
     "@qvac/embed-llamacpp",

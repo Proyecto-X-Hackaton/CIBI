@@ -3,7 +3,12 @@
 
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { C, ConfidenceChip, Disclaimer } from '../components/atoms';
+import { ConfidenceChip, Disclaimer } from '../components/atoms';
+import { useTheme } from '../../theme/ThemeContext';
+import { useThemedStyles } from '../../theme/useThemedStyles';
+import type { ThemeTokens } from '../../theme/tokens';
+import { WizardHeader } from '../components/WizardHeader';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Icon } from '../components/Icon';
 import { useApp } from '../state/AppState';
 import { useStrings } from '../i18n/useStrings';
@@ -15,6 +20,9 @@ import { upgradeConfidence } from '../utils/confidence';
 export default function ReviewScreen({ inspectionId }: { inspectionId: string }) {
   const { setWizard, setDetailsOpen, tier, refreshPendings } = useApp();
   const t = useStrings();
+  const { theme: th } = useTheme();
+  const s = useThemedStyles(makeStyles);
+  const insets = useSafeAreaInsets();
   const [report, setReport] = useState<StructuredReport | null>(null);
   const [busy, setBusy] = useState<string | null>('Estructurando con MedPsy…');
   const [dup, setDup] = useState<{ candidate_id: string; label: string; similarity: number } | null>(null);
@@ -100,10 +108,10 @@ export default function ReviewScreen({ inspectionId }: { inspectionId: string })
   };
 
   return (
-    <ScrollView style={s.wrap} contentContainerStyle={{ gap: 14, paddingBottom: 24 }}>
-      <Text style={s.h1}>{t.reviewTitle}</Text>
+    <ScrollView style={s.wrap} contentContainerStyle={{ gap: 14, paddingBottom: 24 + insets.bottom }}>
+      <WizardHeader title={t.wizardStep2} onBack={() => setWizard({ name: 'chat', inspectionId })} />
       <Text style={s.sub}>{tier} · del chat · <Text onPress={() => setDetailsOpen(true)} style={{ textDecorationLine: 'underline' }}>detalles</Text></Text>
-      {busy ? <View style={s.card}><ActivityIndicator color={C.green} /><Text style={s.sub}>{busy}</Text></View> : null}
+      {busy ? <View style={s.card}><ActivityIndicator color={th.green} /><Text style={s.sub}>{busy}</Text></View> : null}
       {report ? (
         <View style={s.card}>
           <Text style={s.h3}>{t.detectedEquipment}</Text>
@@ -118,7 +126,7 @@ export default function ReviewScreen({ inspectionId }: { inspectionId: string })
       ) : null}
       {dup ? (
         <View style={s.warn}>
-          <View style={s.warnRow}><Icon name="warn" size={16} color="#FBBF24" /><Text style={s.warnText}>Posible duplicado — coincide {dup.similarity.toFixed(2)} con “{dup.label}”.</Text></View>
+          <View style={s.warnRow}><Icon name="warn" size={16} color={th.amber} /><Text style={s.warnText}>Posible duplicado — coincide {dup.similarity.toFixed(2)} con “{dup.label}”.</Text></View>
           <View style={s.row}>
             <TouchableOpacity><Text style={s.warnLink}>Ver</Text></TouchableOpacity>
             <TouchableOpacity onPress={() => setDup(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Text style={s.warnLink}>Mantener ambos</Text></TouchableOpacity>
@@ -129,9 +137,9 @@ export default function ReviewScreen({ inspectionId }: { inspectionId: string })
         <View style={s.q}>
           <Text style={s.qText}>Falta lo más valioso ({followIdx + 1}/{followups.length}): <Text style={{ fontWeight: '800' }}>{followups[followIdx]}</Text></Text>
           <View style={s.row}>
-            <TextInput style={s.answer} placeholder="Ej. Fabricante X…" placeholderTextColor="#6E6E78" value={answer} onChangeText={setAnswer} />
-            <TouchableOpacity style={s.skip} onPress={answerFollowup} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Text style={{ color: '#fff' }}>OK</Text></TouchableOpacity>
-            <TouchableOpacity style={s.skip} onPress={() => setFollowIdx((i) => i + 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Text style={{ color: C.muted }}>Saltar</Text></TouchableOpacity>
+            <TextInput style={s.answer} placeholder="Ej. Fabricante X…" placeholderTextColor={th.muted} value={answer} onChangeText={setAnswer} />
+            <TouchableOpacity style={s.skip} onPress={answerFollowup} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Text style={{ color: th.text }}>OK</Text></TouchableOpacity>
+            <TouchableOpacity style={s.skip} onPress={() => setFollowIdx((i) => i + 1)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Text style={{ color: th.muted }}>Saltar</Text></TouchableOpacity>
           </View>
         </View>
       ) : null}
@@ -146,25 +154,25 @@ export default function ReviewScreen({ inspectionId }: { inspectionId: string })
   );
 }
 
-const s = StyleSheet.create({
+const makeStyles = (t: ThemeTokens) => StyleSheet.create({
   wrap: { flex: 1, padding: 16 },
-  h1: { color: C.text, fontSize: 22, fontWeight: '800' },
-  sub: { color: C.muted, fontSize: 13 },
-  card: { backgroundColor: C.surface, borderColor: C.border, borderWidth: 1, borderRadius: 16, padding: 16 },
-  h3: { color: C.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 12 },
-  itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomColor: C.border, borderBottomWidth: 1 },
-  item: { color: C.text, fontSize: 13, flex: 1 },
+  h1: { color: t.text, fontSize: 22, fontWeight: '800' },
+  sub: { color: t.muted, fontSize: 13 },
+  card: { backgroundColor: t.surface, borderColor: t.border, borderWidth: 1, borderRadius: 16, padding: 16 },
+  h3: { color: t.muted, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.7, marginBottom: 12 },
+  itemRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 8, borderBottomColor: t.border, borderBottomWidth: 1 },
+  item: { color: t.text, fontSize: 13, flex: 1 },
   warn: { backgroundColor: 'rgba(245,158,11,.10)', borderColor: 'rgba(245,158,11,.5)', borderWidth: 1, borderRadius: 14, padding: 14 },
   warnRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  warnText: { color: '#FBBF24', fontSize: 13, flex: 1 },
-  warnLink: { color: '#FBBF24', marginTop: 8 },
+  warnText: { color: t.amber, fontSize: 13, flex: 1 },
+  warnLink: { color: t.amber, marginTop: 8 },
   q: { backgroundColor: 'rgba(34,197,94,.08)', borderColor: 'rgba(34,197,94,.45)', borderWidth: 1, borderRadius: 14, padding: 14 },
-  qText: { color: C.text, fontSize: 13 },
+  qText: { color: t.text, fontSize: 13 },
   row: { flexDirection: 'row', gap: 8, marginTop: 12 },
-  answer: { flex: 1, backgroundColor: '#0B0B0F', color: '#fff', borderColor: '#3A3A45', borderWidth: 1, borderRadius: 10, padding: 10, fontSize: 13 },
-  skip: { borderColor: '#3A3A45', borderWidth: 1, borderRadius: 10, padding: 10 },
-  cta: { backgroundColor: C.green, borderRadius: 14, minHeight: 54, justifyContent: 'center' },
-  ctaText: { color: '#04120A', fontWeight: '800', fontSize: 15, textAlign: 'center' },
-  ghost: { borderColor: '#3A3A45', borderWidth: 1, borderRadius: 14, minHeight: 52, justifyContent: 'center' },
-  ghostText: { color: '#fff', textAlign: 'center' },
+  answer: { flex: 1, backgroundColor: t.bg, color: t.text, borderColor: t.border, borderWidth: 1, borderRadius: 10, padding: 10, fontSize: 13 },
+  skip: { borderColor: t.border, borderWidth: 1, borderRadius: 10, padding: 10 },
+  cta: { backgroundColor: t.green, borderRadius: 14, minHeight: 54, justifyContent: 'center' },
+  ctaText: { color: t.onAccent, fontWeight: '800', fontSize: 15, textAlign: 'center' },
+  ghost: { borderColor: t.border, borderWidth: 1, borderRadius: 14, minHeight: 52, justifyContent: 'center' },
+  ghostText: { color: t.text, textAlign: 'center' },
 });

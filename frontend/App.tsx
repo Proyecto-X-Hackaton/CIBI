@@ -5,12 +5,18 @@
 // (Android Studio: open ./android after prebuild, Run on physical device —
 //  llamacpp fails on emulators.) All inference: @qvac/sdk on-device only.
 
-import React from 'react';
-import { SafeAreaView, StatusBar, StyleSheet, Text, View, TouchableOpacity, Platform } from 'react-native';
+import React, { useEffect } from 'react';
+import { StatusBar, StyleSheet, Text, View, TouchableOpacity } from 'react-native';
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import * as NavigationBar from 'expo-navigation-bar';
 import { AppProvider, useApp } from './src/state/AppState';
-import { C, OfflineBadge, TierPill, TierDetailsSheet, Disclaimer } from './src/components/atoms';
+import { ThemeProvider, useTheme } from './theme/ThemeContext';
+import { useThemedStyles } from './theme/useThemedStyles';
+import type { ThemeTokens } from './theme/tokens';
+import { OfflineBadge, TierPill, TierDetailsSheet } from './src/components/atoms';
 import { Icon, type IconName } from './src/components/Icon';
 import { useStrings } from './src/i18n/useStrings';
+import { useHardwareBack } from './src/utils/backNav';
 import HomeScreen from './src/screens/HomeScreen';
 import ChatCaptureScreen from './src/screens/ChatCaptureScreen';
 import ReviewScreen from './src/screens/ReviewScreen';
@@ -22,17 +28,27 @@ import SettingsScreen from './src/screens/SettingsScreen';
 function Shell() {
   const { tab, setTab, wizard, setWizard, tier, online, pendings, setDetailsOpen, ready, refreshPendings } = useApp();
   const t = useStrings();
+  const insets = useSafeAreaInsets();
+  useHardwareBack({ wizard, tab, setTab, setWizard, refreshPendings });
+
+  const { theme } = useTheme();
+  const s = useThemedStyles(makeStyles);
+  useEffect(() => {
+    // Match the system nav bar to the app chrome (3-button mode).
+    NavigationBar.setBackgroundColorAsync(theme.bg).catch(() => {});
+    NavigationBar.setButtonStyleAsync(theme.statusBar).catch(() => {});
+  }, [theme]);
 
   if (!ready) {
     return (
-      <SafeAreaView style={s.safe}>
-        <View style={s.center}><Text style={{ color: C.text }}>CIBI cargando… (SQLite local)</Text></View>
-      </SafeAreaView>
+      <View style={[s.safe, { paddingTop: insets.top }]}>
+        <View style={s.center}><Text style={{ color: theme.text }}>CIBI cargando… (SQLite local)</Text></View>
+      </View>
     );
   }
 
   return (
-    <SafeAreaView style={s.safe}>
+    <View style={[s.safe, { paddingTop: insets.top }]}>
       <View style={s.appbar}>
         <Text style={s.brand}>CIBI{wizard ? ' · Inspección' : ''}</Text>
         <TierPill tier={tier} onPress={() => setDetailsOpen(true)} />
@@ -48,15 +64,6 @@ function Shell() {
           ) : (
             <ReportScreen inspectionId={wizard.inspectionId} />
           )}
-          <TouchableOpacity
-            style={s.exitbar}
-            onPress={() => { refreshPendings(); setWizard(null); }}
-            accessibilityRole="button"
-            accessibilityLabel={t.exitWizard}
-            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-          >
-            <Text style={s.exitText}>{t.exitWizard}</Text>
-          </TouchableOpacity>
         </View>
       ) : (
         <View style={{ flex: 1 }}>
@@ -64,7 +71,7 @@ function Shell() {
           {tab === 'panel' && <PanelScreen />}
           {tab === 'network' && <NetworkScreen />}
           {tab === 'settings' && <SettingsScreen />}
-          <View style={s.tabbar}>
+          <View style={[s.tabbar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
             {(
               [
                 ['home', 'home', t.home],
@@ -80,7 +87,7 @@ function Shell() {
                 accessibilityRole="button"
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Icon name={icon as IconName} size={22} color={tab === id ? C.green : '#6E6E78'} />
+                <Icon name={icon as IconName} size={22} color={tab === id ? theme.green : theme.muted} />
                 <Text style={[s.tabLabel, tab === id && s.tabActive]}>{label}</Text>
               </TouchableOpacity>
             ))}
@@ -88,28 +95,35 @@ function Shell() {
         </View>
       )}
       <TierDetailsSheet />
-    </SafeAreaView>
+    </View>
   );
 }
 
 export default function App() {
   return (
-    <AppProvider>
-      <StatusBar barStyle="light-content" />
-      <Shell />
-    </AppProvider>
+    <SafeAreaProvider>
+      <ThemeProvider>
+        <AppProvider>
+          <ThemedStatusBar />
+          <Shell />
+        </AppProvider>
+      </ThemeProvider>
+    </SafeAreaProvider>
   );
 }
 
-const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg, paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+function ThemedStatusBar() {
+  const { theme } = useTheme();
+  return <StatusBar barStyle={theme.statusBar === 'light' ? 'light-content' : 'dark-content'} />;
+}
+
+const makeStyles = (t: ThemeTokens) => StyleSheet.create({
+  safe: { flex: 1, backgroundColor: t.bg },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   appbar: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingTop: 8 },
-  brand: { color: C.text, fontWeight: '800', fontSize: 15 },
-  exitbar: { minHeight: 56, justifyContent: 'center', paddingHorizontal: 16, paddingVertical: 14, borderTopColor: C.border, borderTopWidth: 1, backgroundColor: '#101016' },
-  exitText: { color: C.text, fontSize: 15, fontWeight: '700', textAlign: 'center' },
-  tabbar: { flexDirection: 'row', borderTopColor: C.border, borderTopWidth: 1, backgroundColor: '#101016', paddingBottom: 18, paddingTop: 8 },
+  brand: { color: t.text, fontWeight: '800', fontSize: 15 },
+  tabbar: { flexDirection: 'row', borderTopColor: t.border, borderTopWidth: 1, backgroundColor: t.bg, paddingTop: 8 },
   tab: { flex: 1, alignItems: 'center', gap: 3, minHeight: 48, justifyContent: 'center' },
-  tabLabel: { fontSize: 10, color: '#6E6E78' },
-  tabActive: { color: C.green, fontWeight: '700' },
-});
+  tabLabel: { fontSize: 10, color: t.muted },
+  tabActive: { color: t.green, fontWeight: '700' },
+} as const);
